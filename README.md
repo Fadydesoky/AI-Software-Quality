@@ -1,130 +1,130 @@
-# Software Quality Intelligence Platform
+# 🚀 Qualioro — AI-Powered Software Quality Intelligence
 
-**AI-powered code quality analytics for engineering teams.**
-
-Analyze, predict, and improve your software quality in seconds. Get actionable insights powered by machine learning, not guesswork.
-
-[Live Demo](https://ai-software-quality-flax.vercel.app/) | [Get Started](#getting-started)
+> Analyze, predict, and improve your software quality in seconds.
 
 ---
 
-## Why This Matters
+## 🧠 Overview
 
-Every engineering team ships code under pressure. But without visibility into code health, small issues compound into costly technical debt, unpredictable releases, and burnt-out teams.
+**Qualioro** is an AI-powered analytics tool that helps developers and teams evaluate software quality using key engineering metrics.
 
-This platform gives you **clarity**. Input your metrics, get an instant quality score, understand the risk, and know exactly what to improve first.
+Instead of relying on guesswork, Qualioro provides:
 
-No black boxes. No vague reports. Just explainable AI that tells you what matters.
-
----
-
-## Features
-
-### Quality Scoring Engine
-AI-based quality scoring (0-100) with risk classification and confidence indicators. Know your code health at a glance.
-
-### Explainable AI
-See exactly how each metric contributes to your score. Transparent logic, not magic numbers.
-
-### What-If Simulator
-Adjust inputs in real-time and see how changes impact your score. Find the highest-leverage improvements before writing code.
-
-### Smart Recommendations
-Prioritized, actionable suggestions based on your specific metrics. Not generic advice.
-
-### Analytics Dashboard
-Track score distribution, historical trends, and compare runs side-by-side.
-
-### Export & Share
-Export results as CSV, generate shareable links, and create PDF-ready reports.
+* 📊 Quality score
+* ⚠️ Risk level
+* 📈 Confidence indicator
+* 🔍 Explainable insights
+* 🧪 What-if simulation
 
 ---
 
-## How It Works
+## ✨ Features
 
-The platform calculates a quality score based on four core factors:
+### 🔢 Smart Quality Scoring
 
-| Factor | What It Measures |
-|--------|------------------|
-| **Bug Density** | Bugs per commit - lower is better |
-| **Code Complexity** | Cyclomatic complexity - manageable is ideal |
-| **Test Coverage** | Percentage of code covered by tests |
-| **Developer Productivity** | Commits per developer - balanced is healthy |
+Generate a real-time quality score based on:
 
-Each factor is weighted based on empirical research. The model produces:
-
-- **Quality Score** (0-100): Overall code health
-- **Risk Level** (Low / Medium / High): Release readiness indicator
-- **Confidence Level**: How reliable the prediction is given your data
-- **Recommendations**: Specific actions to improve your score
-
-The scoring logic is fully visible. Toggle Advanced Mode to see the exact formulas.
+* Commits
+* Bugs
+* Code Complexity
+* Test Coverage
+* Team Size
 
 ---
 
-## Tech Stack
+### 📊 Explainable AI
 
-| Layer | Technology |
-|-------|------------|
-| Framework | Next.js (App Router) |
-| Language | TypeScript |
-| Styling | Tailwind CSS |
-| Components | shadcn/ui |
-| Charts | Recharts |
+Understand *why* your score is what it is:
+
+* Feature contribution breakdown
+* Risk decomposition
+* Score sensitivity
 
 ---
 
-## Project Structure
+### 🧪 What-if Simulator
 
-```
-app/           → Routes and pages
-components/    → UI components
-lib/           → Prediction engine and utilities
-public/        → Static assets
-```
+Adjust your metrics and instantly see:
 
----
-
-## Getting Started
-
-```bash
-# Install dependencies
-npm install
-
-# Start development server
-npm run dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) to start analyzing.
+* Score changes
+* Risk impact
+* Optimization suggestions
 
 ---
 
-## Use Cases
+### 📈 Confidence Indicator
 
-- **Pre-release risk checks** — Know if you're ready to ship
-- **Technical debt tracking** — Quantify and prioritize what to fix
-- **Team health monitoring** — Spot trends before they become problems
-- **Code review decisions** — Data-backed quality conversations
-- **Sprint planning** — Factor quality into velocity
+Get a confidence level for each prediction:
 
----
-
-## Roadmap
-
-- [ ] GitHub/GitLab integration for automated metrics
-- [ ] Team dashboards with role-based views
-- [ ] Real-time CI/CD data ingestion
-- [ ] Historical trend alerts
-- [ ] API access for custom integrations
+* Low / Medium / High
+* Based on data stability
 
 ---
 
-## Author
+### 🧠 AI Insights
+
+Receive actionable recommendations:
+
+* Reduce complexity
+* Improve coverage
+* Optimize team productivity
+
+---
+
+## 🖥️ Live Demo
+
+👉 https://qualioro.vercel.app/
+
+---
+
+## ⚙️ Tech Stack
+
+* **Framework:** Next.js (App Router)
+* **Language:** TypeScript
+* **UI:** Tailwind CSS + shadcn/ui
+* **Icons:** Lucide
+* **Deployment:** Vercel
+
+---
+
+## 🧭 How It Works
+
+1. Input your project metrics
+2. Get instant AI analysis
+3. Explore insights and simulate improvements
+
+---
+
+## 🎯 Use Cases
+
+* 👨‍💻 Developers → Evaluate code quality
+* 🏢 Teams → Monitor engineering health
+* 🚀 Startups → Improve product reliability
+
+---
+
+## 🚧 Future Improvements
+
+* 🔐 Authentication (user accounts)
+* 📁 Project management (save analyses)
+* 🔗 GitHub integration (auto-fetch metrics)
+* 💳 SaaS monetization (pricing tiers)
+
+---
+
+## 💡 Why Qualioro?
+
+Most tools show metrics.
+**Qualioro turns metrics into decisions.**
+
+---
+
+## 👤 Author
 
 Built by **Fady Desoky**
 
 ---
 
-<p align="center">
-  <em>Ship better code, faster.</em>
-</p>
+## ⭐️ Support
+
+If you like this project, give it a ⭐️ on GitHub!
