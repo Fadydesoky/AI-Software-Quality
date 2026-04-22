@@ -14,23 +14,17 @@ else:
     bg = "#f8fafc"
     fg = "#111827"
     card = "#ffffff"
-    
+
 st.markdown(f"""
 <style>
-
-/* Page */
 .stApp {{
     background-color: {bg};
     color: {fg};
 }}
-
-/* Layout */
 .block-container {{
     max-width: 1050px;
     padding-top: 2rem;
 }}
-
-/* Card */
 .card {{
     padding: 18px;
     border-radius: 14px;
@@ -38,60 +32,24 @@ st.markdown(f"""
     box-shadow: 0 6px 25px rgba(0,0,0,0.08);
     margin-bottom: 18px;
 }}
-
-/* Inputs FIX (المهم جدًا) */
-input, textarea {{
-    background-color: {"#1e1e1e" if theme=="Dark" else "#ffffff"} !important;
-    color: {"#ffffff" if theme=="Dark" else "#111111"} !important;
-    border-radius: 10px !important;
-}}
-
-/* Sliders */
-.stSlider > div {{
-    color: {fg};
-}}
-
-/* Labels */
-label {{
-    color: {fg} !important;
-    font-weight: 500;
-}}
-
-/* Button */
 button {{
     border-radius: 10px !important;
-    height: 45px !important;
+    height: 44px !important;
     font-weight: 600 !important;
 }}
-
-/* Table fix */
-.dataframe {{
-    background-color: {card} !important;
-}}
-
-/* Smooth animation */
-.card {{
-    animation: fadeIn 0.4s ease-in-out;
-}}
-
-@keyframes fadeIn {{
-    from {{opacity: 0; transform: translateY(8px);}}
-    to {{opacity: 1; transform: translateY(0);}}
-}}
-
 </style>
 """, unsafe_allow_html=True)
 
 st.title("Software Quality Predictor")
 
-col1, col2 = st.columns(2)
+c1, c2 = st.columns(2)
 
-with col1:
+with c1:
     commits = st.number_input("Commits", 50, 1000, 200)
     bugs = st.number_input("Bugs", 0, 200, 50)
     developers = st.number_input("Developers", 1, 20, 5)
 
-with col2:
+with c2:
     complexity = st.slider("Complexity", 1, 10, 5)
     coverage = st.slider("Test Coverage (%)", 0, 100, 70)
 
@@ -104,18 +62,18 @@ if run:
     result = predict_quality(commits, bugs, complexity, developers, coverage)
 
     if result["risk"] == "High":
-        st.markdown(f'<div class="card" style="border-left:5px solid #ff4b4b;"><h3>Risk: {result["risk"]}</h3></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="card" style="border-left:5px solid #ef4444;"><h3>Risk: {result["risk"]}</h3></div>', unsafe_allow_html=True)
     elif result["risk"] == "Medium":
-        st.markdown(f'<div class="card" style="border-left:5px solid #ffa500;"><h3>Risk: {result["risk"]}</h3></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="card" style="border-left:5px solid #f59e0b;"><h3>Risk: {result["risk"]}</h3></div>', unsafe_allow_html=True)
     else:
-        st.markdown(f'<div class="card" style="border-left:5px solid #00c853;"><h3>Risk: {result["risk"]}</h3></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="card" style="border-left:5px solid #22c55e;"><h3>Risk: {result["risk"]}</h3></div>', unsafe_allow_html=True)
 
-    col_a, col_b = st.columns(2)
+    a, b = st.columns(2)
 
-    with col_a:
+    with a:
         st.markdown(f'<div class="card"><h4>Quality Score</h4><h2>{result["score"]}/100</h2></div>', unsafe_allow_html=True)
 
-    with col_b:
+    with b:
         st.progress(result["score"] / 100)
 
     st.markdown('<div class="card">', unsafe_allow_html=True)
@@ -157,13 +115,16 @@ if st.session_state.history:
     hist_df = pd.DataFrame(st.session_state.history)
     st.dataframe(hist_df, use_container_width=True)
 
-    idx = list(range(len(hist_df)))
-    col1, col2 = st.columns(2)
+    csv = hist_df.to_csv(index=False).encode("utf-8")
+    st.download_button("Export CSV", csv, "history.csv", "text/csv")
 
-    with col1:
+    idx = list(range(len(hist_df)))
+    c1, c2 = st.columns(2)
+
+    with c1:
         s1 = st.selectbox("Scenario A", idx, index=0)
 
-    with col2:
+    with c2:
         s2 = st.selectbox("Scenario B", idx, index=min(1, len(idx)-1))
 
     if s1 != s2:
