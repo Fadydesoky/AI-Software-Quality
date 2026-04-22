@@ -1,36 +1,116 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Software Quality Intelligence Platform
+
+A modern AI-powered analytics tool that evaluates software quality, predicts risk levels, and provides actionable engineering insights.
+
+## Overview
+
+This platform helps engineering teams understand the health of their systems using key development metrics such as commits, bugs, complexity, team size, and test coverage.
+
+It transforms raw inputs into:
+
+* Quality score (0–100)
+* Risk classification (Low / Medium / High)
+* Confidence level
+* Explainable insights and recommendations
+
+## Live Demo
+
+https://ai-software-quality-flax.vercel.app/
+
+## Features
+
+### Core Prediction Engine
+
+* AI-based quality scoring system
+* Risk classification (Low / Medium / High)
+* Confidence indicator based on data stability
+
+### Explainable AI
+
+* Feature contribution breakdown
+* Transparent scoring logic
+* Metric impact visualization
+
+### What-if Simulation
+
+* Real-time scenario adjustments
+* Instant feedback on score changes
+* Optimization suggestions
+
+### Insight Layer
+
+* AI-generated system analysis
+* Smart recommendations
+* Weakness detection
+
+### Analytics Dashboard
+
+* Score distribution
+* Historical tracking
+* Trend indicators
+
+### Export & Sharing
+
+* Export results as CSV
+* Generate shareable links
+* PDF-ready reporting structure
+
+## Tech Stack
+
+* Next.js (App Router)
+* TypeScript
+* Tailwind CSS
+* shadcn/ui
+* Recharts
+
+## Project Structure
+
+app/ – application routes and pages
+components/ – reusable UI components
+lib/ – prediction logic and utilities
+public/ – static assets
+
+## How It Works
+
+The system calculates a quality score based on:
+
+* Bug density (bugs / commits)
+* Code complexity
+* Test coverage
+* Developer productivity
+
+Each factor contributes differently to the final score, enabling explainable insights and optimization.
 
 ## Getting Started
 
-First, run the development server:
-
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Then open:
+http://localhost:3000
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Use Cases
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+* Engineering health monitoring
+* Code quality assessment
+* Technical debt evaluation
+* Pre-release risk analysis
+* Team performance insights
 
-## Learn More
+## Future Improvements
 
-To learn more about Next.js, take a look at the following resources:
+* User authentication
+* Team-based dashboards
+* API integration with GitHub/GitLab
+* Real-time CI/CD data ingestion
+* Advanced ML models
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Author
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Fady Desoky
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+This project demonstrates how AI can be applied to software engineering analytics to produce meaningful, actionable insights.
