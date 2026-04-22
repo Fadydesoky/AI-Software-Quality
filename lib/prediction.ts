@@ -30,6 +30,29 @@ export interface ScoreBreakdown {
   }
 }
 
+export interface RiskCategory {
+  name: string
+  score: number
+  maxScore: number
+  percentage: number
+  status: "good" | "warning" | "bad"
+  description: string
+}
+
+export interface Recommendation {
+  priority: "high" | "medium" | "low"
+  metric: string
+  action: string
+  impact: string
+  targetValue: string
+}
+
+export interface TrendAnalysis {
+  direction: "improving" | "declining" | "stable"
+  change: number
+  message: string
+}
+
 export interface PredictionResult {
   risk: "High" | "Medium" | "Low"
   score: number
@@ -42,7 +65,15 @@ export interface PredictionResult {
     complexity: number
   }
   confidence: number
+  confidenceLevel: "Low" | "Medium" | "High"
   breakdown: ScoreBreakdown
+  riskCategories: RiskCategory[]
+  recommendations: Recommendation[]
+  formulas: {
+    bugDensity: string
+    score: string
+    productivity: string
+  }
 }
 
 export interface HistoryEntry extends PredictionInput {
@@ -76,6 +107,174 @@ export const THRESHOLDS = {
     good: 40,
     warning: 20,
   },
+}
+
+// Generate smart recommendations based on metrics
+function generateRecommendations(
+  input: PredictionInput,
+  bugDensity: number,
+  score: number
+): Recommendation[] {
+  const recommendations: Recommendation[] = []
+
+  // Coverage recommendations
+  if (input.coverage < THRESHOLDS.coverage.good) {
+    const targetCoverage = Math.min(input.coverage + 20, 80)
+    const projectedImprovement = Math.round((targetCoverage - input.coverage) * 0.33)
+    recommendations.push({
+      priority: input.coverage < THRESHOLDS.coverage.warning ? "high" : "medium",
+      metric: "Test Coverage",
+      action: `Increase test coverage from ${input.coverage}% to ${targetCoverage}%`,
+      impact: `+${projectedImprovement} points to quality score`,
+      targetValue: `${targetCoverage}%`,
+    })
+  }
+
+  // Bug density recommendations
+  if (bugDensity > THRESHOLDS.bugDensity.warning) {
+    const targetBugReduction = Math.round(input.bugs * 0.3)
+    const newBugDensity = (input.bugs - targetBugReduction) / Math.max(input.commits, 1)
+    const improvement = Math.round((bugDensity - newBugDensity) * 40)
+    recommendations.push({
+      priority: "high",
+      metric: "Bug Density",
+      action: `Reduce bugs from ${input.bugs} to ${input.bugs - targetBugReduction}`,
+      impact: `+${improvement} points, risk level may decrease`,
+      targetValue: `${newBugDensity.toFixed(2)} bugs/commit`,
+    })
+  }
+
+  // Complexity recommendations
+  if (input.complexity > THRESHOLDS.complexity.warning) {
+    const targetComplexity = Math.max(input.complexity - 2, 5)
+    const improvement = (input.complexity - targetComplexity) * 3
+    recommendations.push({
+      priority: input.complexity >= 9 ? "high" : "medium",
+      metric: "Code Complexity",
+      action: `Reduce complexity from ${input.complexity}/10 to ${targetComplexity}/10`,
+      impact: `+${improvement} points through refactoring`,
+      targetValue: `${targetComplexity}/10`,
+    })
+  }
+
+  // Productivity recommendations
+  const productivity = input.commits / Math.max(input.developers, 1)
+  if (productivity < THRESHOLDS.productivity.warning) {
+    recommendations.push({
+      priority: "low",
+      metric: "Team Productivity",
+      action: "Review workflow blockers and optimize processes",
+      impact: "Improved delivery velocity",
+      targetValue: `>${THRESHOLDS.productivity.warning} commits/dev`,
+    })
+  }
+
+  // Sort by priority
+  const priorityOrder = { high: 0, medium: 1, low: 2 }
+  return recommendations.sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority])
+}
+
+// Calculate risk categories
+function calculateRiskCategories(
+  input: PredictionInput,
+  bugDensity: number,
+  breakdown: ScoreBreakdown
+): RiskCategory[] {
+  // Code Quality (based on complexity and bug density)
+  const codeQualityScore = breakdown.complexity.contribution + (breakdown.bugDensity.contribution * 0.5)
+  const codeQualityMax = breakdown.complexity.maxContribution + (breakdown.bugDensity.maxContribution * 0.5)
+  const codeQualityPct = Math.round((codeQualityScore / codeQualityMax) * 100)
+
+  // Testing Quality (based on coverage)
+  const testingScore = breakdown.coverage.contribution
+  const testingMax = breakdown.coverage.maxContribution
+  const testingPct = Math.round((testingScore / testingMax) * 100)
+
+  // Team Efficiency (based on productivity and bug density)
+  const productivity = input.commits / Math.max(input.developers, 1)
+  const productivityScore = Math.min(productivity / THRESHOLDS.productivity.good, 1) * 25
+  const teamScore = productivityScore + (breakdown.bugDensity.contribution * 0.5)
+  const teamMax = 25 + (breakdown.bugDensity.maxContribution * 0.5)
+  const teamPct = Math.round((teamScore / teamMax) * 100)
+
+  const getStatus = (pct: number): "good" | "warning" | "bad" => {
+    if (pct >= 70) return "good"
+    if (pct >= 50) return "warning"
+    return "bad"
+  }
+
+  return [
+    {
+      name: "Code Quality",
+      score: Math.round(codeQualityScore),
+      maxScore: Math.round(codeQualityMax),
+      percentage: codeQualityPct,
+      status: getStatus(codeQualityPct),
+      description: "Complexity and defect density",
+    },
+    {
+      name: "Testing Quality",
+      score: Math.round(testingScore),
+      maxScore: Math.round(testingMax),
+      percentage: testingPct,
+      status: getStatus(testingPct),
+      description: "Test coverage and reliability",
+    },
+    {
+      name: "Team Efficiency",
+      score: Math.round(teamScore),
+      maxScore: Math.round(teamMax),
+      percentage: teamPct,
+      status: getStatus(teamPct),
+      description: "Productivity and delivery",
+    },
+  ]
+}
+
+// Analyze trend from history
+export function analyzeTrend(history: HistoryEntry[]): TrendAnalysis {
+  if (history.length < 2) {
+    return {
+      direction: "stable",
+      change: 0,
+      message: "Not enough data for trend analysis",
+    }
+  }
+
+  // Compare recent entries (last 3) vs earlier entries
+  const recent = history.slice(-3)
+  const earlier = history.slice(-6, -3)
+  
+  if (earlier.length === 0) {
+    const lastTwo = history.slice(-2)
+    const change = lastTwo[1].score - lastTwo[0].score
+    if (Math.abs(change) < 3) {
+      return { direction: "stable", change, message: "Quality is stable" }
+    }
+    return {
+      direction: change > 0 ? "improving" : "declining",
+      change,
+      message: change > 0 
+        ? `Quality improving (+${change} points)` 
+        : `Quality declining (${change} points)`,
+    }
+  }
+
+  const recentAvg = recent.reduce((sum, h) => sum + h.score, 0) / recent.length
+  const earlierAvg = earlier.reduce((sum, h) => sum + h.score, 0) / earlier.length
+  const change = Math.round(recentAvg - earlierAvg)
+
+  if (Math.abs(change) < 3) {
+    return { direction: "stable", change, message: "Quality is stable" }
+  }
+
+  return {
+    direction: change > 0 ? "improving" : "declining",
+    change,
+    message: change > 0
+      ? `Quality improving (+${change} avg points)`
+      : `Quality declining (${change} avg points)`,
+  }
 }
 
 export function validateInputs(input: PredictionInput): InputValidation[] {
@@ -228,6 +427,23 @@ export function predictQuality(input: PredictionInput): PredictionResult {
   const minDistance = Math.min(distanceFrom50, distanceFrom75)
   const confidence = Math.min(100, Math.round(50 + minDistance * 2))
 
+  // Determine confidence level
+  const confidenceLevel: "Low" | "Medium" | "High" = 
+    confidence >= 75 ? "High" : confidence >= 50 ? "Medium" : "Low"
+
+  // Calculate risk categories
+  const riskCategories = calculateRiskCategories(input, bugDensity, breakdown)
+
+  // Generate recommendations
+  const recommendations = generateRecommendations(input, bugDensity, score)
+
+  // Store formulas for display
+  const formulas = {
+    bugDensity: `bugs / commits = ${bugs} / ${safeCommits} = ${bugDensity.toFixed(3)}`,
+    score: `(1 - bugDensity) * 40 + (10 - complexity) * 3 + coverage * 0.33`,
+    productivity: `commits / developers = ${commits} / ${safeDevelopers} = ${productivity.toFixed(1)}`,
+  }
+
   return {
     risk,
     score,
@@ -240,7 +456,11 @@ export function predictQuality(input: PredictionInput): PredictionResult {
       complexity,
     },
     confidence,
+    confidenceLevel,
     breakdown,
+    riskCategories,
+    recommendations,
+    formulas,
   }
 }
 

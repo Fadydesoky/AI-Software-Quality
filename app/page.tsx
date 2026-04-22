@@ -15,9 +15,16 @@ import { ScoreBreakdownCard } from "@/components/score-breakdown"
 import { TrendSimulation } from "@/components/trend-simulation"
 import { ExportPanel } from "@/components/export-panel"
 import { ValidationWarnings } from "@/components/validation-warnings"
+import { RiskBreakdown } from "@/components/risk-breakdown"
+import { Recommendations } from "@/components/recommendations"
+import { FormulaDisplay } from "@/components/formula-display"
+import { TrendIntelligence } from "@/components/trend-intelligence"
+import { ModeToggle } from "@/components/mode-toggle"
+import { ConfidenceBadge } from "@/components/confidence-badge"
 import { 
   predictQuality, 
   validateInputs,
+  analyzeTrend,
   decodeStateFromURL,
   type PredictionInput, 
   type PredictionResult, 
@@ -46,6 +53,7 @@ function DashboardContent() {
   const [isLoading, setIsLoading] = React.useState(false)
   const [selectedIds, setSelectedIds] = React.useState<string[]>([])
   const [comparisonEntries, setComparisonEntries] = React.useState<[HistoryEntry, HistoryEntry] | null>(null)
+  const [isAdvancedMode, setIsAdvancedMode] = React.useState(false)
 
   // Live "what-if" analysis - update score as inputs change
   const liveResult = React.useMemo(() => {
@@ -56,6 +64,11 @@ function DashboardContent() {
   const validations = React.useMemo(() => {
     return validateInputs(inputValues)
   }, [inputValues])
+
+  // Trend analysis
+  const trend = React.useMemo(() => {
+    return analyzeTrend(history)
+  }, [history])
 
   const hasErrors = validations.some(v => v.type === "error")
 
@@ -110,25 +123,35 @@ function DashboardContent() {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="sticky top-0 z-50 border-b border-border/40 bg-background/80 backdrop-blur-xl">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
+        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-foreground">
               <Activity className="h-5 w-5 text-background" />
             </div>
             <span className="text-lg font-semibold tracking-tight">Quality Predictor</span>
           </div>
-          <ThemeToggle />
+          <div className="flex items-center gap-3">
+            <ModeToggle isAdvanced={isAdvancedMode} onToggle={setIsAdvancedMode} />
+            <ThemeToggle />
+          </div>
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-6 py-10">
+      <main className="mx-auto max-w-7xl px-6 py-10">
         {/* KPI Summary */}
         <div className="animate-fade-in">
           <KPICards history={history} />
         </div>
 
+        {/* Trend Intelligence */}
+        {history.length >= 2 && (
+          <div className="mt-6 animate-fade-in">
+            <TrendIntelligence trend={trend} />
+          </div>
+        )}
+
         {/* Main Grid */}
-        <div className="mt-8 grid gap-8 lg:grid-cols-[360px_1fr]">
+        <div className="mt-8 grid gap-8 lg:grid-cols-[380px_1fr]">
           {/* Left Column - Input */}
           <div className="space-y-6">
             <div className="animate-slide-up" style={{ animationDelay: "50ms" }}>
@@ -153,7 +176,13 @@ function DashboardContent() {
               className="animate-slide-up rounded-xl border border-border/50 bg-muted/30 p-5"
               style={{ animationDelay: "100ms" }}
             >
-              <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Live Preview</p>
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Live Preview</p>
+                <ConfidenceBadge 
+                  confidence={liveResult.confidence} 
+                  confidenceLevel={liveResult.confidenceLevel} 
+                />
+              </div>
               <div className="mt-4 flex items-end justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Predicted Score</p>
@@ -175,11 +204,28 @@ function DashboardContent() {
             <div className="animate-slide-up" style={{ animationDelay: "150ms" }}>
               <ExportPanel input={inputValues} result={result} />
             </div>
+
+            {/* Formula Display (Advanced Mode) */}
+            {isAdvancedMode && (
+              <div className="animate-fade-in">
+                <FormulaDisplay 
+                  formulas={liveResult.formulas} 
+                  breakdown={liveResult.breakdown} 
+                />
+              </div>
+            )}
           </div>
 
           {/* Right Column - Results */}
           <div className="space-y-6 animate-slide-up" style={{ animationDelay: "150ms" }}>
             <ResultsCard result={result} />
+            
+            {/* Risk Breakdown (Advanced Mode) */}
+            {result && isAdvancedMode && (
+              <div className="animate-fade-in">
+                <RiskBreakdown categories={result.riskCategories} />
+              </div>
+            )}
             
             {/* Score Breakdown */}
             {result && (
@@ -187,8 +233,18 @@ function DashboardContent() {
                 <ScoreBreakdownCard breakdown={result.breakdown} />
               </div>
             )}
+
+            {/* Smart Recommendations */}
+            {result && (
+              <div className="animate-fade-in">
+                <Recommendations 
+                  recommendations={result.recommendations} 
+                  isAdvancedMode={isAdvancedMode}
+                />
+              </div>
+            )}
             
-            {result && <MetricsChart result={result} />}
+            {result && isAdvancedMode && <MetricsChart result={result} />}
           </div>
         </div>
 
@@ -232,8 +288,8 @@ function DashboardContent() {
 
       {/* Footer */}
       <footer className="border-t border-border/40 py-8 mt-16">
-        <div className="mx-auto max-w-6xl px-6 text-center text-sm text-muted-foreground">
-          Built for engineering teams
+        <div className="mx-auto max-w-7xl px-6 text-center text-sm text-muted-foreground">
+          Built for engineering teams - {isAdvancedMode ? "Advanced" : "Simple"} Mode
         </div>
       </footer>
     </div>
