@@ -25,45 +25,91 @@ function generateAIInsight(
 ): string {
   const { risk, score, breakdown, metrics } = result
   
-  // Find the dominant factor (worst performing metric)
+  // Build factor analysis with contributions
   const factors = [
-    { name: "bug density", contribution: breakdown.bugDensity.contribution, max: breakdown.bugDensity.maxContribution, status: breakdown.bugDensity.status, percentage: Math.round((breakdown.bugDensity.contribution / breakdown.bugDensity.maxContribution) * 100) },
-    { name: "code complexity", contribution: breakdown.complexity.contribution, max: breakdown.complexity.maxContribution, status: breakdown.complexity.status, percentage: Math.round((breakdown.complexity.contribution / breakdown.complexity.maxContribution) * 100) },
-    { name: "test coverage", contribution: breakdown.coverage.contribution, max: breakdown.coverage.maxContribution, status: breakdown.coverage.status, percentage: Math.round((breakdown.coverage.contribution / breakdown.coverage.maxContribution) * 100) },
+    { 
+      name: "bug density", 
+      displayName: "Bug Density",
+      contribution: breakdown.bugDensity.contribution, 
+      max: breakdown.bugDensity.maxContribution, 
+      status: breakdown.bugDensity.status, 
+      efficiency: Math.round((breakdown.bugDensity.contribution / breakdown.bugDensity.maxContribution) * 100),
+      value: metrics.bugDensity.toFixed(2),
+      unit: "bugs/commit"
+    },
+    { 
+      name: "code complexity", 
+      displayName: "Complexity",
+      contribution: breakdown.complexity.contribution, 
+      max: breakdown.complexity.maxContribution, 
+      status: breakdown.complexity.status, 
+      efficiency: Math.round((breakdown.complexity.contribution / breakdown.complexity.maxContribution) * 100),
+      value: inputValues.complexity.toString(),
+      unit: "/10"
+    },
+    { 
+      name: "test coverage", 
+      displayName: "Test Coverage",
+      contribution: breakdown.coverage.contribution, 
+      max: breakdown.coverage.maxContribution, 
+      status: breakdown.coverage.status, 
+      efficiency: Math.round((breakdown.coverage.contribution / breakdown.coverage.maxContribution) * 100),
+      value: inputValues.coverage.toString(),
+      unit: "%"
+    },
   ]
   
-  // Sort to find primary driver (lowest percentage = worst performing)
-  const sortedFactors = [...factors].sort((a, b) => a.percentage - b.percentage)
-  const primaryDriver = sortedFactors[0]
-  const secondaryDriver = sortedFactors[1]
-  
-  // Calculate contribution percentages for the insight text
+  // Calculate contribution percentages to total score
   const totalContribution = factors.reduce((sum, f) => sum + f.contribution, 0)
-  const primaryContribPercentage = Math.round((primaryDriver.contribution / totalContribution) * 100)
-  const secondaryContribPercentage = Math.round((secondaryDriver.contribution / totalContribution) * 100)
+  const factorsWithImpact = factors.map(f => ({
+    ...f,
+    impactPercentage: Math.round((f.contribution / totalContribution) * 100)
+  }))
   
-  // Build the insight message
-  let insight = `Your system is currently at **${risk} risk** with a quality score of **${score}/100**. `
+  // Sort by efficiency to find best and worst performing
+  const sortedByEfficiency = [...factorsWithImpact].sort((a, b) => b.efficiency - a.efficiency)
+  const strongestMetric = sortedByEfficiency[0]
+  const weakestMetric = sortedByEfficiency[sortedByEfficiency.length - 1]
   
-  if (primaryDriver.status === "bad") {
-    insight += `The main contributing factor is **${primaryDriver.name}** (${primaryContribPercentage}% of score impact), which is performing below optimal levels. `
-  } else if (primaryDriver.status === "warning") {
-    insight += `The primary area requiring attention is **${primaryDriver.name}** (${primaryContribPercentage}% of score impact), followed by ${secondaryDriver.name}. `
+  // Sort by impact to find primary driver
+  const sortedByImpact = [...factorsWithImpact].sort((a, b) => b.impactPercentage - a.impactPercentage)
+  const primaryDriver = sortedByImpact[0]
+  
+  // Build the analytical insight message
+  let insight = `Your system is at **${risk} risk** (**${score}/100**). `
+  
+  // Always mention the primary driver with impact percentage
+  insight += `The primary driver is **${primaryDriver.name}** (**${primaryDriver.impactPercentage}% impact**)`
+  
+  // Mention strongest metric if it's different from weakest and performing well
+  if (strongestMetric.name !== weakestMetric.name && strongestMetric.status === "good") {
+    insight += `, while **${strongestMetric.name}** contributes positively at **${strongestMetric.efficiency}% efficiency**. `
+  } else if (strongestMetric.efficiency >= 70) {
+    insight += `, with **${strongestMetric.name}** as your strongest area (**${strongestMetric.efficiency}%** of max). `
   } else {
-    insight += `All metrics are performing well. `
+    insight += `. `
   }
   
-  // Add specific improvement suggestion
-  if (inputValues.coverage < 80 && breakdown.coverage.status !== "good") {
-    const targetCoverage = Math.min(inputValues.coverage + 15, 85)
-    insight += `Improving test coverage from ${inputValues.coverage}% to ${targetCoverage}% will likely reduce risk significantly.`
-  } else if (metrics.bugDensity > 0.25) {
-    const targetBugs = Math.round(inputValues.bugs * 0.7)
-    insight += `Reducing bugs from ${inputValues.bugs} to ${targetBugs} could move you to a lower risk category.`
-  } else if (inputValues.complexity > 6) {
-    insight += `Reducing code complexity through refactoring will improve maintainability and score.`
+  // Actionable insight based on weakest metric
+  if (weakestMetric.status === "bad" || weakestMetric.status === "warning") {
+    // Calculate potential improvement
+    const currentPoints = weakestMetric.contribution
+    const maxPoints = weakestMetric.max
+    const potentialGain = Math.round(maxPoints - currentPoints)
+    
+    if (weakestMetric.name === "test coverage") {
+      const targetCoverage = Math.min(inputValues.coverage + 20, 90)
+      insight += `Improving coverage from **${inputValues.coverage}%** to **${targetCoverage}%** could add **+${Math.round(potentialGain * 0.6)}-${potentialGain} points**.`
+    } else if (weakestMetric.name === "bug density") {
+      const targetBugs = Math.max(Math.round(inputValues.bugs * 0.5), 1)
+      insight += `Reducing bugs from **${inputValues.bugs}** to **${targetBugs}** would have the highest impact, potentially adding **+${Math.round(potentialGain * 0.7)}-${potentialGain} points**.`
+    } else {
+      const targetComplexity = Math.max(inputValues.complexity - 2, 3)
+      insight += `Reducing complexity from **${inputValues.complexity}** to **${targetComplexity}** could improve your score by **+${Math.round(potentialGain * 0.5)}-${potentialGain} points**.`
+    }
   } else {
-    insight += `Continue maintaining these healthy metrics to sustain low risk.`
+    // All metrics performing well
+    insight += `All metrics are operating efficiently. **${strongestMetric.displayName}** leads at **${strongestMetric.impactPercentage}% impact** (${strongestMetric.value}${strongestMetric.unit}), maintaining overall system health.`
   }
   
   return insight
