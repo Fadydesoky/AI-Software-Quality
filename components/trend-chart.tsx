@@ -52,7 +52,7 @@ export function TrendChart({ history }: TrendChartProps) {
                   fontSize: 12,
                   boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
                 }}
-                formatter={(value: number) => [`${value}`, "Score"]}
+                formatter={(value) => [`${value ?? 0}`, "Score"]}
               />
               <ReferenceLine 
                 y={75} 

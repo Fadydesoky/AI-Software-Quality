@@ -66,7 +66,10 @@ export function ScoreHistogram({ history }: ScoreHistogramProps) {
                   fontSize: 12,
                   boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
                 }}
-                formatter={(value: number) => [`${value} prediction${value !== 1 ? 's' : ''}`, "Count"]}
+                formatter={(value) => {
+                  const numValue = typeof value === 'number' ? value : 0
+                  return [`${numValue} prediction${numValue !== 1 ? 's' : ''}`, "Count"]
+                }}
               />
               <Bar dataKey="count" radius={[6, 6, 0, 0]} animationDuration={800}>
                 {buckets.map((_, index) => (
