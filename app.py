@@ -1,3 +1,4 @@
+import matplotlib.pyplot as plt
 import streamlit as st
 import pandas as pd
 from model import predict_quality
@@ -132,3 +133,14 @@ if st.session_state.history:
         st.bar_chart(comp.T)
 else:
     st.write("No runs yet")
+
+
+
+st.subheader("Score Distribution")
+
+fig, ax = plt.subplots()
+ax.hist(hist_df["score"], bins=10)
+ax.set_xlabel("Score")
+ax.set_ylabel("Frequency")
+
+st.pyplot(fig)
