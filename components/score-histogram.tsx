@@ -43,7 +43,7 @@ export function ScoreHistogram({ history }: ScoreHistogramProps) {
       </CardHeader>
       <CardContent>
         <div className="h-[200px] w-full">
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height="100%" minWidth={0}>
             <BarChart data={buckets} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
               <XAxis 
                 dataKey="range" 

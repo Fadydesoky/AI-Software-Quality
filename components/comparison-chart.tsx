@@ -53,7 +53,7 @@ export function ComparisonChart({ entries, onClose }: ComparisonChartProps) {
       </CardHeader>
       <CardContent>
         <div className="h-[240px] w-full">
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height="100%" minWidth={0}>
             <BarChart data={data} margin={{ top: 16, right: 16, left: -16, bottom: 0 }}>
               <XAxis 
                 dataKey="name" 

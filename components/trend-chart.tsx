@@ -28,7 +28,7 @@ export function TrendChart({ history }: TrendChartProps) {
       </CardHeader>
       <CardContent>
         <div className="h-[200px] w-full">
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height="100%" minWidth={0}>
             <LineChart data={data} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
               <XAxis 
                 dataKey="time" 
