@@ -20,6 +20,7 @@ interface InputPanelProps {
   onChange: (values: PredictionInput) => void
   onPredict: () => void
   isLoading?: boolean
+  disabled?: boolean
 }
 
 const tooltips = {
@@ -40,6 +41,7 @@ export function InputPanel({
   onChange,
   onPredict,
   isLoading,
+  disabled,
 }: InputPanelProps) {
   const handleNumberChange =
     (field: keyof PredictionInput) =>
@@ -193,9 +195,9 @@ export function InputPanel({
           <Button
             onClick={onPredict}
             className="w-full"
-            disabled={isLoading}
+            disabled={isLoading || disabled}
           >
-            {isLoading ? "Analyzing..." : "Predict Quality"}
+            {isLoading ? "Analyzing..." : "Save Scenario"}
           </Button>
         </CardContent>
       </Card>

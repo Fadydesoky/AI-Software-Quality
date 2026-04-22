@@ -6,6 +6,30 @@ export interface PredictionInput {
   coverage: number
 }
 
+export interface ScoreBreakdown {
+  bugDensity: {
+    value: number
+    threshold: number
+    contribution: number
+    maxContribution: number
+    status: "good" | "warning" | "bad"
+  }
+  complexity: {
+    value: number
+    threshold: number
+    contribution: number
+    maxContribution: number
+    status: "good" | "warning" | "bad"
+  }
+  coverage: {
+    value: number
+    threshold: number
+    contribution: number
+    maxContribution: number
+    status: "good" | "warning" | "bad"
+  }
+}
+
 export interface PredictionResult {
   risk: "High" | "Medium" | "Low"
   score: number
@@ -18,6 +42,7 @@ export interface PredictionResult {
     complexity: number
   }
   confidence: number
+  breakdown: ScoreBreakdown
 }
 
 export interface HistoryEntry extends PredictionInput {
@@ -27,20 +52,149 @@ export interface HistoryEntry extends PredictionInput {
   score: number
 }
 
+export interface InputValidation {
+  field: keyof PredictionInput
+  type: "warning" | "error"
+  message: string
+}
+
+// Constants for thresholds
+export const THRESHOLDS = {
+  bugDensity: {
+    good: 0.1,
+    warning: 0.3,
+  },
+  complexity: {
+    good: 5,
+    warning: 7,
+  },
+  coverage: {
+    good: 70,
+    warning: 50,
+  },
+  productivity: {
+    good: 40,
+    warning: 20,
+  },
+}
+
+export function validateInputs(input: PredictionInput): InputValidation[] {
+  const validations: InputValidation[] = []
+
+  // Check for zero or negative values
+  if (input.commits <= 0) {
+    validations.push({
+      field: "commits",
+      type: "error",
+      message: "Commits must be greater than 0",
+    })
+  }
+
+  if (input.developers <= 0) {
+    validations.push({
+      field: "developers",
+      type: "error",
+      message: "Developers must be greater than 0",
+    })
+  }
+
+  // Check for unrealistic values
+  if (input.bugs > input.commits) {
+    validations.push({
+      field: "bugs",
+      type: "warning",
+      message: "Bugs exceed commits - unusual ratio",
+    })
+  }
+
+  if (input.commits > 0 && input.bugs / input.commits > 0.8) {
+    validations.push({
+      field: "bugs",
+      type: "warning",
+      message: "Very high bug density detected",
+    })
+  }
+
+  if (input.developers > 0 && input.commits / input.developers > 500) {
+    validations.push({
+      field: "commits",
+      type: "warning",
+      message: "Unusually high commits per developer",
+    })
+  }
+
+  if (input.complexity === 10 && input.coverage < 30) {
+    validations.push({
+      field: "coverage",
+      type: "warning",
+      message: "High complexity with low coverage is risky",
+    })
+  }
+
+  return validations
+}
+
 export function predictQuality(input: PredictionInput): PredictionResult {
   const { commits, bugs, complexity, developers, coverage } = input
 
-  // Calculate derived metrics
-  const bugDensity = commits > 0 ? bugs / commits : 1
-  const productivity = developers > 0 ? commits / developers : 0
+  // Prevent division by zero
+  const safeCommits = Math.max(commits, 1)
+  const safeDevelopers = Math.max(developers, 1)
 
-  // Calculate score components
-  const bugDensityScore = (1 - Math.min(bugDensity, 1)) * 40
-  const complexityScore = (10 - complexity) * 3
-  const coverageScore = coverage * 0.33
+  // Calculate derived metrics
+  const bugDensity = bugs / safeCommits
+  const productivity = safeCommits / safeDevelopers
+
+  // Calculate score components with detailed breakdown
+  const bugDensityContribution = (1 - Math.min(bugDensity, 1)) * 40
+  const complexityContribution = (10 - complexity) * 3
+  const coverageContribution = coverage * 0.33
+
+  // Determine status for each metric
+  const getBugDensityStatus = (): "good" | "warning" | "bad" => {
+    if (bugDensity <= THRESHOLDS.bugDensity.good) return "good"
+    if (bugDensity <= THRESHOLDS.bugDensity.warning) return "warning"
+    return "bad"
+  }
+
+  const getComplexityStatus = (): "good" | "warning" | "bad" => {
+    if (complexity <= THRESHOLDS.complexity.good) return "good"
+    if (complexity <= THRESHOLDS.complexity.warning) return "warning"
+    return "bad"
+  }
+
+  const getCoverageStatus = (): "good" | "warning" | "bad" => {
+    if (coverage >= THRESHOLDS.coverage.good) return "good"
+    if (coverage >= THRESHOLDS.coverage.warning) return "warning"
+    return "bad"
+  }
+
+  const breakdown: ScoreBreakdown = {
+    bugDensity: {
+      value: Math.round(bugDensity * 100) / 100,
+      threshold: THRESHOLDS.bugDensity.warning,
+      contribution: Math.round(bugDensityContribution * 10) / 10,
+      maxContribution: 40,
+      status: getBugDensityStatus(),
+    },
+    complexity: {
+      value: complexity,
+      threshold: THRESHOLDS.complexity.warning,
+      contribution: Math.round(complexityContribution * 10) / 10,
+      maxContribution: 30,
+      status: getComplexityStatus(),
+    },
+    coverage: {
+      value: coverage,
+      threshold: THRESHOLDS.coverage.warning,
+      contribution: Math.round(coverageContribution * 10) / 10,
+      maxContribution: 33,
+      status: getCoverageStatus(),
+    },
+  }
 
   // Calculate total score (clamped 0-100)
-  let score = bugDensityScore + complexityScore + coverageScore
+  let score = bugDensityContribution + complexityContribution + coverageContribution
   score = Math.max(0, Math.min(100, Math.round(score)))
 
   // Determine risk level
@@ -53,19 +207,19 @@ export function predictQuality(input: PredictionInput): PredictionResult {
     risk = "Low"
   }
 
-  // Generate reasons
+  // Generate detailed reasons with actual values
   const reasons: string[] = []
-  if (coverage < 50) {
-    reasons.push("Low test coverage (below 50%)")
+  if (coverage < THRESHOLDS.coverage.warning) {
+    reasons.push(`Test coverage at ${coverage}% (threshold: ${THRESHOLDS.coverage.warning}%)`)
   }
-  if (bugDensity > 0.3) {
-    reasons.push("High bug density (above 0.3 bugs/commit)")
+  if (bugDensity > THRESHOLDS.bugDensity.warning) {
+    reasons.push(`Bug density at ${bugDensity.toFixed(2)} bugs/commit (threshold: ${THRESHOLDS.bugDensity.warning})`)
   }
-  if (complexity > 7) {
-    reasons.push("High code complexity (above 7)")
+  if (complexity > THRESHOLDS.complexity.warning) {
+    reasons.push(`Code complexity at ${complexity}/10 (threshold: ${THRESHOLDS.complexity.warning})`)
   }
-  if (productivity < 20) {
-    reasons.push("Low developer productivity (below 20 commits/dev)")
+  if (productivity < THRESHOLDS.productivity.warning) {
+    reasons.push(`Developer productivity at ${productivity.toFixed(1)} commits/dev (threshold: ${THRESHOLDS.productivity.warning})`)
   }
 
   // Calculate confidence score based on distance from thresholds
@@ -86,7 +240,52 @@ export function predictQuality(input: PredictionInput): PredictionResult {
       complexity,
     },
     confidence,
+    breakdown,
   }
+}
+
+// Simulate score for a given coverage value (for trend simulation)
+export function simulateScoreForCoverage(
+  baseInput: PredictionInput,
+  newCoverage: number
+): number {
+  const result = predictQuality({ ...baseInput, coverage: newCoverage })
+  return result.score
+}
+
+// Simulate score for a given complexity value
+export function simulateScoreForComplexity(
+  baseInput: PredictionInput,
+  newComplexity: number
+): number {
+  const result = predictQuality({ ...baseInput, complexity: newComplexity })
+  return result.score
+}
+
+// Generate simulation data for charts
+export function generateSimulationData(
+  baseInput: PredictionInput,
+  metric: "coverage" | "complexity"
+): { value: number; score: number }[] {
+  const data: { value: number; score: number }[] = []
+  
+  if (metric === "coverage") {
+    for (let i = 0; i <= 100; i += 5) {
+      data.push({
+        value: i,
+        score: simulateScoreForCoverage(baseInput, i),
+      })
+    }
+  } else {
+    for (let i = 1; i <= 10; i++) {
+      data.push({
+        value: i,
+        score: simulateScoreForComplexity(baseInput, i),
+      })
+    }
+  }
+  
+  return data
 }
 
 export function getRiskColor(risk: "High" | "Medium" | "Low"): string {
@@ -129,5 +328,36 @@ export function getBadgeVariant(score: number): { label: string; variant: "defau
     return { label: "Needs Attention", variant: "secondary" }
   } else {
     return { label: "Critical", variant: "destructive" }
+  }
+}
+
+// Encode state to URL-safe string
+export function encodeStateToURL(input: PredictionInput): string {
+  const params = new URLSearchParams({
+    c: input.commits.toString(),
+    b: input.bugs.toString(),
+    x: input.complexity.toString(),
+    d: input.developers.toString(),
+    v: input.coverage.toString(),
+  })
+  return params.toString()
+}
+
+// Decode state from URL
+export function decodeStateFromURL(searchParams: URLSearchParams): PredictionInput | null {
+  try {
+    const commits = parseInt(searchParams.get("c") || "")
+    const bugs = parseInt(searchParams.get("b") || "")
+    const complexity = parseInt(searchParams.get("x") || "")
+    const developers = parseInt(searchParams.get("d") || "")
+    const coverage = parseInt(searchParams.get("v") || "")
+
+    if ([commits, bugs, complexity, developers, coverage].some(isNaN)) {
+      return null
+    }
+
+    return { commits, bugs, complexity, developers, coverage }
+  } catch {
+    return null
   }
 }

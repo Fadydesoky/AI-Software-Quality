@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useSearchParams } from "next/navigation"
 import { InputPanel } from "@/components/input-panel"
 import { ResultsCard } from "@/components/results-card"
 import { MetricsChart } from "@/components/metrics-chart"
@@ -10,18 +11,36 @@ import { ScoreHistogram } from "@/components/score-histogram"
 import { KPICards } from "@/components/kpi-cards"
 import { TrendChart } from "@/components/trend-chart"
 import { ThemeToggle } from "@/components/theme-toggle"
-import { predictQuality, type PredictionInput, type PredictionResult, type HistoryEntry } from "@/lib/prediction"
+import { ScoreBreakdownCard } from "@/components/score-breakdown"
+import { TrendSimulation } from "@/components/trend-simulation"
+import { ExportPanel } from "@/components/export-panel"
+import { ValidationWarnings } from "@/components/validation-warnings"
+import { 
+  predictQuality, 
+  validateInputs,
+  decodeStateFromURL,
+  type PredictionInput, 
+  type PredictionResult, 
+  type HistoryEntry 
+} from "@/lib/prediction"
 import { Activity } from "lucide-react"
 
-export default function Dashboard() {
-  const [inputValues, setInputValues] = React.useState<PredictionInput>({
-    commits: 200,
-    bugs: 50,
-    complexity: 5,
-    developers: 5,
-    coverage: 70,
-  })
+function DashboardContent() {
+  const searchParams = useSearchParams()
+  
+  // Initialize from URL params if present
+  const initialInput = React.useMemo(() => {
+    const fromURL = decodeStateFromURL(searchParams)
+    return fromURL ?? {
+      commits: 200,
+      bugs: 50,
+      complexity: 5,
+      developers: 5,
+      coverage: 70,
+    }
+  }, [searchParams])
 
+  const [inputValues, setInputValues] = React.useState<PredictionInput>(initialInput)
   const [result, setResult] = React.useState<PredictionResult | null>(null)
   const [history, setHistory] = React.useState<HistoryEntry[]>([])
   const [isLoading, setIsLoading] = React.useState(false)
@@ -33,7 +52,16 @@ export default function Dashboard() {
     return predictQuality(inputValues)
   }, [inputValues])
 
+  // Input validation
+  const validations = React.useMemo(() => {
+    return validateInputs(inputValues)
+  }, [inputValues])
+
+  const hasErrors = validations.some(v => v.type === "error")
+
   const handlePredict = () => {
+    if (hasErrors) return
+    
     setIsLoading(true)
     
     setTimeout(() => {
@@ -109,8 +137,16 @@ export default function Dashboard() {
                 onChange={setInputValues}
                 onPredict={handlePredict}
                 isLoading={isLoading}
+                disabled={hasErrors}
               />
             </div>
+
+            {/* Validation Warnings */}
+            {validations.length > 0 && (
+              <div className="animate-fade-in">
+                <ValidationWarnings validations={validations} />
+              </div>
+            )}
             
             {/* Live Preview */}
             <div 
@@ -134,13 +170,31 @@ export default function Dashboard() {
                 </div>
               </div>
             </div>
+
+            {/* Export Panel */}
+            <div className="animate-slide-up" style={{ animationDelay: "150ms" }}>
+              <ExportPanel input={inputValues} result={result} />
+            </div>
           </div>
 
           {/* Right Column - Results */}
           <div className="space-y-6 animate-slide-up" style={{ animationDelay: "150ms" }}>
             <ResultsCard result={result} />
+            
+            {/* Score Breakdown */}
+            {result && (
+              <div className="animate-fade-in">
+                <ScoreBreakdownCard breakdown={result.breakdown} />
+              </div>
+            )}
+            
             {result && <MetricsChart result={result} />}
           </div>
+        </div>
+
+        {/* Trend Simulation */}
+        <div className="mt-10 animate-fade-in">
+          <TrendSimulation currentInput={inputValues} />
         </div>
 
         {/* Comparison Chart */}
@@ -183,5 +237,17 @@ export default function Dashboard() {
         </div>
       </footer>
     </div>
+  )
+}
+
+export default function Dashboard() {
+  return (
+    <React.Suspense fallback={
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-muted-foreground">Loading...</div>
+      </div>
+    }>
+      <DashboardContent />
+    </React.Suspense>
   )
 }
