@@ -2,12 +2,14 @@ import streamlit as st
 from model import predict_quality
 import pandas as pd
 
+
+theme = st.toggle("Dark Mode", value=True)
 # -------------------------------
 # Page Config
 # -------------------------------
 st.set_page_config(page_title="AI Software Quality Predictor", layout="centered")
 
-st.title("🚀 AI Software Quality Predictor")
+st.title("AI Software Quality Predictor")
 st.markdown("### Predict software risk using AI + Data")
 
 # -------------------------------
@@ -27,7 +29,7 @@ with col2:
 # -------------------------------
 # Prediction Button
 # -------------------------------
-if st.button("🔍 Predict Quality"):
+if st.button("Predict Quality"):
 
     risk, explanation, score = predict_quality(
         commits, bugs, complexity, developers, coverage
@@ -48,12 +50,12 @@ if st.button("🔍 Predict Quality"):
     # -------------------------------
     # Score
     # -------------------------------
-    st.metric("📊 Quality Score", f"{score}/100")
+    st.metric("Quality Score", f"{score}/100")
 
     # -------------------------------
     # Explanation
     # -------------------------------
-    st.markdown("### 🧠 Why?")
+    st.markdown("### Why?")
     if explanation:
         for e in explanation:
             st.write(f"- {e}")
@@ -63,7 +65,7 @@ if st.button("🔍 Predict Quality"):
     # -------------------------------
     # Visualization
     # -------------------------------
-    st.markdown("### 📊 Key Metrics")
+    st.markdown("### Key Metrics")
 
     df = pd.DataFrame({
         "Metric": ["Bugs", "Coverage", "Complexity"],
@@ -75,7 +77,7 @@ if st.button("🔍 Predict Quality"):
     # -------------------------------
     # Insights
     # -------------------------------
-    st.markdown("### 💡 Recommendations")
+    st.markdown("### Recommendations")
 
     if coverage < 60:
         st.write("• Increase test coverage to reduce risk")
