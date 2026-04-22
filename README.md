@@ -1,116 +1,130 @@
 # Software Quality Intelligence Platform
 
-A modern AI-powered analytics tool that evaluates software quality, predicts risk levels, and provides actionable engineering insights.
+**AI-powered code quality analytics for engineering teams.**
 
-## Overview
+Analyze, predict, and improve your software quality in seconds. Get actionable insights powered by machine learning, not guesswork.
 
-This platform helps engineering teams understand the health of their systems using key development metrics such as commits, bugs, complexity, team size, and test coverage.
+[Live Demo](https://ai-software-quality-flax.vercel.app/) | [Get Started](#getting-started)
 
-It transforms raw inputs into:
+---
 
-* Quality score (0–100)
-* Risk classification (Low / Medium / High)
-* Confidence level
-* Explainable insights and recommendations
+## Why This Matters
 
-## Live Demo
+Every engineering team ships code under pressure. But without visibility into code health, small issues compound into costly technical debt, unpredictable releases, and burnt-out teams.
 
-https://ai-software-quality-flax.vercel.app/
+This platform gives you **clarity**. Input your metrics, get an instant quality score, understand the risk, and know exactly what to improve first.
+
+No black boxes. No vague reports. Just explainable AI that tells you what matters.
+
+---
 
 ## Features
 
-### Core Prediction Engine
-
-* AI-based quality scoring system
-* Risk classification (Low / Medium / High)
-* Confidence indicator based on data stability
+### Quality Scoring Engine
+AI-based quality scoring (0-100) with risk classification and confidence indicators. Know your code health at a glance.
 
 ### Explainable AI
+See exactly how each metric contributes to your score. Transparent logic, not magic numbers.
 
-* Feature contribution breakdown
-* Transparent scoring logic
-* Metric impact visualization
+### What-If Simulator
+Adjust inputs in real-time and see how changes impact your score. Find the highest-leverage improvements before writing code.
 
-### What-if Simulation
-
-* Real-time scenario adjustments
-* Instant feedback on score changes
-* Optimization suggestions
-
-### Insight Layer
-
-* AI-generated system analysis
-* Smart recommendations
-* Weakness detection
+### Smart Recommendations
+Prioritized, actionable suggestions based on your specific metrics. Not generic advice.
 
 ### Analytics Dashboard
+Track score distribution, historical trends, and compare runs side-by-side.
 
-* Score distribution
-* Historical tracking
-* Trend indicators
+### Export & Share
+Export results as CSV, generate shareable links, and create PDF-ready reports.
 
-### Export & Sharing
-
-* Export results as CSV
-* Generate shareable links
-* PDF-ready reporting structure
-
-## Tech Stack
-
-* Next.js (App Router)
-* TypeScript
-* Tailwind CSS
-* shadcn/ui
-* Recharts
-
-## Project Structure
-
-app/ – application routes and pages
-components/ – reusable UI components
-lib/ – prediction logic and utilities
-public/ – static assets
+---
 
 ## How It Works
 
-The system calculates a quality score based on:
+The platform calculates a quality score based on four core factors:
 
-* Bug density (bugs / commits)
-* Code complexity
-* Test coverage
-* Developer productivity
+| Factor | What It Measures |
+|--------|------------------|
+| **Bug Density** | Bugs per commit - lower is better |
+| **Code Complexity** | Cyclomatic complexity - manageable is ideal |
+| **Test Coverage** | Percentage of code covered by tests |
+| **Developer Productivity** | Commits per developer - balanced is healthy |
 
-Each factor contributes differently to the final score, enabling explainable insights and optimization.
+Each factor is weighted based on empirical research. The model produces:
+
+- **Quality Score** (0-100): Overall code health
+- **Risk Level** (Low / Medium / High): Release readiness indicator
+- **Confidence Level**: How reliable the prediction is given your data
+- **Recommendations**: Specific actions to improve your score
+
+The scoring logic is fully visible. Toggle Advanced Mode to see the exact formulas.
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|------------|
+| Framework | Next.js (App Router) |
+| Language | TypeScript |
+| Styling | Tailwind CSS |
+| Components | shadcn/ui |
+| Charts | Recharts |
+
+---
+
+## Project Structure
+
+```
+app/           → Routes and pages
+components/    → UI components
+lib/           → Prediction engine and utilities
+public/        → Static assets
+```
+
+---
 
 ## Getting Started
 
 ```bash
+# Install dependencies
 npm install
+
+# Start development server
 npm run dev
 ```
 
-Then open:
-http://localhost:3000
-
-## Use Cases
-
-* Engineering health monitoring
-* Code quality assessment
-* Technical debt evaluation
-* Pre-release risk analysis
-* Team performance insights
-
-## Future Improvements
-
-* User authentication
-* Team-based dashboards
-* API integration with GitHub/GitLab
-* Real-time CI/CD data ingestion
-* Advanced ML models
-
-## Author
-
-Fady Desoky
+Open [http://localhost:3000](http://localhost:3000) to start analyzing.
 
 ---
 
-This project demonstrates how AI can be applied to software engineering analytics to produce meaningful, actionable insights.
+## Use Cases
+
+- **Pre-release risk checks** — Know if you're ready to ship
+- **Technical debt tracking** — Quantify and prioritize what to fix
+- **Team health monitoring** — Spot trends before they become problems
+- **Code review decisions** — Data-backed quality conversations
+- **Sprint planning** — Factor quality into velocity
+
+---
+
+## Roadmap
+
+- [ ] GitHub/GitLab integration for automated metrics
+- [ ] Team dashboards with role-based views
+- [ ] Real-time CI/CD data ingestion
+- [ ] Historical trend alerts
+- [ ] API access for custom integrations
+
+---
+
+## Author
+
+Built by **Fady Desoky**
+
+---
+
+<p align="center">
+  <em>Ship better code, faster.</em>
+</p>

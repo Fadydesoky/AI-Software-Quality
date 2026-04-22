@@ -25,6 +25,7 @@ import { ConfidenceBadge } from "@/components/confidence-badge"
 import { ScoreGauge } from "@/components/score-gauge"
 import { AIInsightsPanel } from "@/components/ai-insights-panel"
 import { ExecutiveSummary } from "@/components/executive-summary"
+import { LandingHero } from "@/components/landing-hero"
 import { 
   predictQuality, 
   validateInputs,
@@ -39,10 +40,15 @@ import { cn } from "@/lib/utils"
 
 function DashboardContent() {
   const searchParams = useSearchParams()
+  const [showLanding, setShowLanding] = React.useState(true)
+  const dashboardRef = React.useRef<HTMLDivElement>(null)
   
   // Initialize from URL params if present
   const initialInput = React.useMemo(() => {
     const fromURL = decodeStateFromURL(searchParams)
+    if (fromURL) {
+      setShowLanding(false)
+    }
     return fromURL ?? {
       commits: 200,
       bugs: 50,
@@ -51,6 +57,13 @@ function DashboardContent() {
       coverage: 70,
     }
   }, [searchParams])
+
+  const handleGetStarted = () => {
+    setShowLanding(false)
+    setTimeout(() => {
+      dashboardRef.current?.scrollIntoView({ behavior: "smooth" })
+    }, 100)
+  }
 
   const [inputValues, setInputValues] = React.useState<PredictionInput>(initialInput)
   const [result, setResult] = React.useState<PredictionResult | null>(null)
@@ -133,6 +146,11 @@ function DashboardContent() {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Landing Hero */}
+      {showLanding && <LandingHero onGetStarted={handleGetStarted} />}
+      
+      {/* Dashboard Section */}
+      <div ref={dashboardRef}>
       {/* Header */}
       <header className="sticky top-0 z-50 border-b border-border/40 bg-background/80 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
@@ -358,6 +376,7 @@ function DashboardContent() {
           </div>
         </div>
       </footer>
+      </div>
     </div>
   )
 }
