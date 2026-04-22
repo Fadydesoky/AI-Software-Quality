@@ -12,8 +12,12 @@ Qualioro helps you understand your code quality in seconds — not just with a s
 Live Demo: https://qualioro.vercel.app/
 
 ---
-
 ## Product Preview
+
+<details>
+<summary>View Screenshots</summary>
+
+<br/>
 
 ### Landing
 ![Landing](./screenshots/landing.png)
@@ -23,6 +27,8 @@ Live Demo: https://qualioro.vercel.app/
 
 ### Insights & Risk Breakdown
 ![Insights](./screenshots/result.png)
+
+</details>
 
 ---
 
