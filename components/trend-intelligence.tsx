@@ -207,11 +207,9 @@ export function TrendIntelligence({ trend, history = [] }: TrendIntelligenceProp
                   const InsightIcon = insight.icon
                   return (
                     <UITooltip key={i}>
-                      <TooltipTrigger asChild>
-                        <Badge
-                          variant="outline"
+                      <TooltipTrigger
                           className={cn(
-                            "gap-1 cursor-help text-[11px] font-medium",
+                            "inline-flex items-center gap-1 cursor-help text-[11px] font-medium rounded-md border px-2.5 py-0.5",
                             insight.type === "positive" && "border-emerald-500/30 bg-emerald-500/5 text-emerald-600 dark:text-emerald-400",
                             insight.type === "warning" && "border-amber-500/30 bg-amber-500/5 text-amber-600 dark:text-amber-400",
                             insight.type === "info" && "border-muted bg-muted/50 text-muted-foreground"
@@ -222,8 +220,7 @@ export function TrendIntelligence({ trend, history = [] }: TrendIntelligenceProp
                           <span className="sm:hidden">
                             {insight.type === "positive" ? "Good" : insight.type === "warning" ? "Warning" : "Info"}
                           </span>
-                        </Badge>
-                      </TooltipTrigger>
+                        </TooltipTrigger>
                       <TooltipContent className="text-xs max-w-[200px]">
                         {insight.message}
                       </TooltipContent>

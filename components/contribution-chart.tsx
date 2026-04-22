@@ -109,8 +109,7 @@ export function ContributionChart({ breakdown, score }: ContributionChartProps) 
           <div className="flex h-10 w-full overflow-hidden rounded-lg">
             {contributionPercentages.map((item, index) => (
               <UITooltip key={item.name}>
-                <TooltipTrigger asChild>
-                  <div
+                <TooltipTrigger
                     className={cn(
                       "h-full transition-all duration-500 cursor-pointer hover:opacity-90",
                       statusBgColors[item.status],
@@ -122,7 +121,6 @@ export function ContributionChart({ breakdown, score }: ContributionChartProps) 
                       minWidth: item.scorePercentage > 0 ? "24px" : "0",
                     }}
                   />
-                </TooltipTrigger>
                 <TooltipContent className="text-xs">
                   <div className="font-medium">{item.name}</div>
                   <div className="text-muted-foreground">

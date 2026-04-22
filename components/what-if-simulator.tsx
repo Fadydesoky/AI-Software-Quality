@@ -298,9 +298,10 @@ export function WhatIfSimulator({ currentInput }: WhatIfSimulatorProps) {
                 </div>
                 <Slider
                   value={[metric.simulated]}
-                  onValueChange={([value]) => 
-                    setSimulation(prev => ({ ...prev, [metric.key]: value }))
-                  }
+                  onValueChange={(value) => {
+                    const newValue = Array.isArray(value) ? value[0] : value
+                    setSimulation(prev => ({ ...prev, [metric.key]: newValue }))
+                  }}
                   min={metric.min}
                   max={metric.max}
                   step={metric.step}

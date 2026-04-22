@@ -233,15 +233,15 @@ export function ScoreGauge({
           </Badge>
           
           <Tooltip>
-            <TooltipTrigger asChild>
-              <Badge 
-                variant="outline"
-                className={cn("font-medium cursor-help", getConfidenceStyles())}
+            <TooltipTrigger
+                className={cn(
+                  "inline-flex items-center gap-1 cursor-help font-medium rounded-md border px-2.5 py-0.5 text-xs",
+                  getConfidenceStyles()
+                )}
               >
                 {confidence}% Confidence
                 <Info className="h-3 w-3 ml-1 opacity-60" />
-              </Badge>
-            </TooltipTrigger>
+              </TooltipTrigger>
             <TooltipContent className="max-w-[200px] text-xs">
               {confidenceLevel === "High" 
                 ? "High confidence - score is well away from risk thresholds"
