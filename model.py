@@ -3,9 +3,6 @@ import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import LabelEncoder
 
-# -------------------------------
-# Data generation (reproducible)
-# -------------------------------
 np.random.seed(42)
 n = 500
 
@@ -17,12 +14,10 @@ data = pd.DataFrame({
     "coverage": np.random.randint(30, 100, n)
 })
 
-# make relations more realistic
 data["bugs"] = (data["complexity"] * np.random.randint(5, 15, n)) + np.random.randint(0, 20, n)
 data["coverage"] = 100 - (data["complexity"] * np.random.randint(3, 8, n)) + np.random.randint(-5, 5, n)
 data["coverage"] = data["coverage"].clip(10, 100)
 
-# features
 data["bug_density"] = data["bugs"] / data["commits"]
 data["productivity"] = data["commits"] / data["developers"]
 
@@ -41,7 +36,6 @@ def classify_risk(score):
 
 data["risk"] = data["risk_score"].apply(classify_risk)
 
-# model
 X = data.drop(["risk", "risk_score"], axis=1)
 y = data["risk"]
 
@@ -50,7 +44,6 @@ y_enc = le.fit_transform(y)
 
 model = RandomForestClassifier(n_estimators=120, random_state=42)
 model.fit(X, y_enc)
-
 
 def predict_quality(commits, bugs, complexity, developers, coverage):
     bug_density = bugs / max(commits, 1)
@@ -69,7 +62,6 @@ def predict_quality(commits, bugs, complexity, developers, coverage):
     pred = model.predict(row)
     model_risk = le.inverse_transform(pred)[0]
 
-    # hybrid adjustment
     if coverage < 50 and bug_density > 0.3:
         final_risk = "High"
     elif coverage < 60:
@@ -77,7 +69,6 @@ def predict_quality(commits, bugs, complexity, developers, coverage):
     else:
         final_risk = model_risk
 
-    # score (0..100)
     score = int(
         max(0, min(100, 100 - (bug_density * 100 + complexity * 5 - coverage * 0.7)))
     )
