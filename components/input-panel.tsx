@@ -234,7 +234,7 @@ export function InputPanel({
           <div className="grid gap-5 sm:grid-cols-3">
             <div className="space-y-2">
               <div className="flex items-center gap-1.5">
-                <Label className="text-sm font-medium">Commits</Label>
+                <Label htmlFor="commits" className="text-sm font-medium">Commits</Label>
                 <Tooltip>
                   <TooltipTrigger>
                     <Info className="h-3.5 w-3.5 text-muted-foreground/60 cursor-help" />
@@ -246,6 +246,7 @@ export function InputPanel({
               </div>
 
               <Input
+                id="commits"
                 type="number"
                 min={1}
                 max={10000}
@@ -256,7 +257,7 @@ export function InputPanel({
 
             <div className="space-y-2">
               <div className="flex items-center gap-1.5">
-                <Label className="text-sm font-medium">Bugs</Label>
+                <Label htmlFor="bugs" className="text-sm font-medium">Bugs</Label>
                 <Tooltip>
                   <TooltipTrigger>
                     <Info className="h-3.5 w-3.5 text-muted-foreground/60 cursor-help" />
@@ -268,6 +269,7 @@ export function InputPanel({
               </div>
 
               <Input
+                id="bugs"
                 type="number"
                 min={0}
                 max={1000}
@@ -278,7 +280,7 @@ export function InputPanel({
 
             <div className="space-y-2">
               <div className="flex items-center gap-1.5">
-                <Label className="text-sm font-medium">Developers</Label>
+                <Label htmlFor="developers" className="text-sm font-medium">Developers</Label>
                 <Tooltip>
                   <TooltipTrigger>
                     <Info className="h-3.5 w-3.5 text-muted-foreground/60 cursor-help" />
@@ -290,6 +292,7 @@ export function InputPanel({
               </div>
 
               <Input
+                id="developers"
                 type="number"
                 min={1}
                 max={100}
@@ -304,7 +307,7 @@ export function InputPanel({
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5">
-                <Label className="text-sm font-medium">Complexity</Label>
+                <Label htmlFor="complexity" className="text-sm font-medium">Complexity</Label>
                 <Tooltip>
                   <TooltipTrigger>
                     <Info className="h-3.5 w-3.5 text-muted-foreground/60 cursor-help" />
@@ -320,18 +323,20 @@ export function InputPanel({
             </div>
 
             <Slider
+              id="complexity"
               value={[values.complexity]}
               onValueChange={handleSliderChange("complexity")}
               min={1}
               max={10}
               step={1}
+              aria-label="Complexity level"
             />
           </div>
 
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5">
-                <Label className="text-sm font-medium">Test Coverage</Label>
+                <Label htmlFor="coverage" className="text-sm font-medium">Test Coverage</Label>
                 <Tooltip>
                   <TooltipTrigger>
                     <Info className="h-3.5 w-3.5 text-muted-foreground/60 cursor-help" />
@@ -347,11 +352,13 @@ export function InputPanel({
             </div>
 
             <Slider
+              id="coverage"
               value={[values.coverage]}
               onValueChange={handleSliderChange("coverage")}
               min={0}
               max={100}
               step={1}
+              aria-label="Test coverage percentage"
             />
           </div>
 

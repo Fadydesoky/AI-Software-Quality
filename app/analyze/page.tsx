@@ -35,11 +35,19 @@ import {
   type PredictionResult, 
   type HistoryEntry 
 } from "@/lib/prediction"
+import { 
+  saveCurrentInput, 
+  loadCurrentInput, 
+  loadHistory, 
+  saveHistoryEntry,
+  clearHistory as clearHistoryStorage 
+} from "@/lib/storage"
 import { Activity, Sparkles, ArrowLeft, Home } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 function AnalyzeContent() {
   const searchParams = useSearchParams()
+  const [isHydrated, setIsHydrated] = React.useState(false)
   
   // Initialize from URL params if present
   const initialInput = React.useMemo(() => {
@@ -62,6 +70,37 @@ function AnalyzeContent() {
   const [comparisonEntries, setComparisonEntries] = React.useState<[HistoryEntry, HistoryEntry] | null>(null)
   const [isAdvancedMode, setIsAdvancedMode] = React.useState(false)
   const [currentRepoUrl, setCurrentRepoUrl] = React.useState<string | undefined>(undefined)
+
+  // Load initial data from localStorage on mount
+  React.useEffect(() => {
+    const savedInput = loadCurrentInput()
+    const savedHistory = loadHistory()
+    
+    if (savedInput) {
+      setInputValues(savedInput)
+    }
+    if (savedHistory.length > 0) {
+      setHistory(savedHistory)
+    }
+    
+    setIsHydrated(true)
+  }, [])
+
+  // Save current input to localStorage whenever it changes
+  React.useEffect(() => {
+    if (isHydrated) {
+      saveCurrentInput(inputValues)
+    }
+  }, [inputValues, isHydrated])
+
+  // Save history entries to localStorage when history changes
+  React.useEffect(() => {
+    if (isHydrated && history.length > 0) {
+      // Only save new entries (those not yet in storage)
+      const lastEntry = history[history.length - 1]
+      saveHistoryEntry(lastEntry)
+    }
+  }, [history, isHydrated])
 
   // Live "what-if" analysis - update score as inputs change
   const liveResult = React.useMemo(() => {
