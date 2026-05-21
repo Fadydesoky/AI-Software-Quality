@@ -78,46 +78,74 @@ function generateAIInsight(
   const sortedByImpact = [...factorsWithImpact].sort((a, b) => b.impactPercentage - a.impactPercentage)
   const primaryDriver = sortedByImpact[0]
   
+  // Validate that we have valid data and avoid mathematical issues
+  const validTotalContribution = totalContribution > 0 ? totalContribution : 1
+  
   // Build insight following Evidence → Interpretation → Suggested Action
   let insight = ""
   
   // EVIDENCE SECTION
   insight += `**EVIDENCE**\n`
   insight += `Risk Level: **${risk}** (Score: **${score}/100**)\n`
-  insight += `Primary Driver: **${primaryDriver.displayName}** at **${primaryDriver.value}${primaryDriver.unit}** (threshold: ${primaryDriver.threshold}${primaryDriver.unit}) — **${primaryDriver.impactPercentage}% of total risk**\n`
   
-  if (weakestMetric.status !== "good") {
-    insight += `Weakest Metric: **${weakestMetric.displayName}** at **${weakestMetric.value}${weakestMetric.unit}** (${weakestMetric.efficiency}% of max contribution)\n`
+  // Only cite primary driver if it exists and has meaningful data
+  if (primaryDriver && primaryDriver.value !== undefined) {
+    const safePrimaryPercentage = Number.isFinite(primaryDriver.impactPercentage) ? primaryDriver.impactPercentage : 0
+    
+    if (primaryDriver.status === "good") {
+      insight += `Strongest Metric: **${primaryDriver.displayName}** at **${primaryDriver.value}${primaryDriver.unit}** (within threshold of ${primaryDriver.threshold}${primaryDriver.unit})\n`
+    } else {
+      insight += `Primary Driver: **${primaryDriver.displayName}** at **${primaryDriver.value}${primaryDriver.unit}** (threshold: ${primaryDriver.threshold}${primaryDriver.unit}) — **${safePrimaryPercentage}% of risk contribution**\n`
+    }
   }
   
-  if (strongestMetric.status === "good") {
-    insight += `Strongest Metric: **${strongestMetric.displayName}** at **${strongestMetric.efficiency}% efficiency** (performing well)\n`
+  // Only add weaker metrics if they're actually problematic
+  if (weakestMetric && weakestMetric.status !== "good" && weakestMetric.value !== undefined) {
+    insight += `Secondary Concern: **${weakestMetric.displayName}** at **${weakestMetric.value}${weakestMetric.unit}** (needs attention)\n`
   }
   
   // INTERPRETATION SECTION
   insight += `\n**INTERPRETATION**\n`
   
   if (primaryDriver.name === "bug density") {
-    insight += `Bug density of **${primaryDriver.value} bugs/commit** exceeds the **${primaryDriver.threshold} bugs/commit** threshold. This indicates high defect rates relative to development activity. High bug density increases production incidents, customer impact, and maintenance costs. It represents **${primaryDriver.impactPercentage}%** of your overall risk score.\n`
+    if (parseFloat(primaryDriver.value) < parseFloat(primaryDriver.threshold)) {
+      insight += `Bug density of **${primaryDriver.value} bugs/commit** remains below the **${primaryDriver.threshold} bugs/commit** threshold and does not represent a significant operational risk currently.\n`
+    } else {
+      insight += `Bug density of **${primaryDriver.value} bugs/commit** exceeds the **${primaryDriver.threshold} bugs/commit** threshold. This indicates defects are accumulating faster than development velocity. High bug density correlates with increased production incidents and maintenance burden.\n`
+    }
   } else if (primaryDriver.name === "code complexity") {
-    insight += `Code complexity at **${primaryDriver.value}/10** exceeds the warning threshold of **${primaryDriver.threshold}/10**. Higher complexity makes code harder to understand, test, and maintain safely. Complex code has higher bug density and requires more testing effort. It represents **${primaryDriver.impactPercentage}%** of your overall risk score.\n`
+    if (parseInt(primaryDriver.value) <= parseInt(primaryDriver.threshold)) {
+      insight += `Code complexity at **${primaryDriver.value}/10** is within acceptable range and does not currently contribute significant architectural risk.\n`
+    } else {
+      insight += `Code complexity at **${primaryDriver.value}/10** exceeds the recommended threshold of **${primaryDriver.threshold}/10**. Higher complexity correlates with increased maintenance overhead, reduced testing effectiveness, and higher bug density.\n`
+    }
   } else if (primaryDriver.name === "test coverage") {
-    insight += `Test coverage at **${primaryDriver.value}%** is below the **${primaryDriver.threshold}%** industry benchmark. Low coverage means **${100 - parseInt(primaryDriver.value)}%** of code paths are untested, increasing bug escape rates to production. Untested code blocks become maintenance risks and regression vectors. It represents **${primaryDriver.impactPercentage}%** of your overall risk score.\n`
+    if (parseInt(primaryDriver.value) >= parseInt(primaryDriver.threshold)) {
+      insight += `Test coverage at **${primaryDriver.value}%** meets the industry benchmark and provides reasonable confidence in edge-case validation.\n`
+    } else {
+      const uncovered = 100 - parseInt(primaryDriver.value)
+      insight += `Test coverage at **${primaryDriver.value}%** is below the **${primaryDriver.threshold}%** benchmark. This means **${uncovered}%** of code paths lack explicit test validation, increasing risk of escaped defects.\n`
+    }
   }
   
   // SUGGESTED ACTION SECTION
   insight += `\n**SUGGESTED ACTION**\n`
   
   if (primaryDriver.name === "bug density") {
-    const targetBugs = Math.max(Math.round(inputValues.bugs * 0.5), 1)
-    const improvement = Math.round((1 - (targetBugs / inputValues.bugs)) * 100)
-    insight += `Reduce bug count from **${inputValues.bugs}** to **${targetBugs}** (${improvement}% reduction). Actions: (1) Add error handling to API calls and async operations; (2) Implement input validation for all user-facing functions; (3) Write tests for edge cases (null, empty, timeout scenarios); (4) Use type-safe patterns to catch bugs at compile time.`
+    const currentBugs = inputValues.bugs
+    const targetBugs = Math.max(Math.round(currentBugs * 0.5), 1)
+    if (currentBugs > 0) {
+      const improvement = Math.round((1 - (targetBugs / currentBugs)) * 100)
+      insight += `Reduce bug count from **${currentBugs}** to **${targetBugs}** (${improvement}% reduction). Specific actions: (1) Add structured error handling to all async/API boundaries; (2) Validate all user input before processing; (3) Add regression tests for reported bugs; (4) Enable type-checking at build time to catch categories of errors early.`
+    } else {
+      insight += `Maintain low bug density through continuous testing and code review processes.`
+    }
   } else if (primaryDriver.name === "code complexity") {
     const targetComplexity = Math.max(inputValues.complexity - 2, 3)
-    insight += `Reduce complexity from **${inputValues.complexity}** to **${targetComplexity}** through refactoring. Actions: (1) Break large functions into smaller, focused units (max 50 LOC each); (2) Extract nested conditions into helper functions; (3) Simplify conditional logic using early returns; (4) Replace complex inheritance with composition.`
+    insight += `Reduce complexity from **${inputValues.complexity}** to **${targetComplexity}**. Specific actions: (1) Identify functions exceeding 50 lines and extract helper functions; (2) Replace nested conditionals with guard clauses; (3) Use composition over inheritance; (4) Consider state machine patterns for complex branching.`
   } else if (primaryDriver.name === "test coverage") {
     const targetCoverage = Math.min(inputValues.coverage + 20, 90)
-    insight += `Increase test coverage from **${inputValues.coverage}%** to **${targetCoverage}%**. Actions: (1) Write unit tests for all public functions; (2) Add integration tests for critical workflows; (3) Test error paths and edge cases explicitly; (4) Set up CI/CD coverage gates (fail builds if coverage drops below ${targetCoverage}%).`
+    insight += `Increase test coverage from **${inputValues.coverage}%** to **${targetCoverage}%**. Specific actions: (1) Write unit tests for all exported functions; (2) Add integration tests for critical workflows; (3) Explicitly test error conditions and edge cases; (4) Configure CI/CD to enforce coverage minimums at build time.`
   }
   
   return insight
@@ -219,6 +247,18 @@ export function AIInsightsPanel({ result, inputValues }: AIInsightsPanelProps) {
 
   const DominantIcon = dominantFactor.icon
 
+  // Parse structured insight sections
+  const insightSections = insight.split("\n\n").reduce((acc, section) => {
+    if (section.includes("**EVIDENCE**")) {
+      acc.evidence = section.replace("**EVIDENCE**\n", "").trim()
+    } else if (section.includes("**INTERPRETATION**")) {
+      acc.interpretation = section.replace("**INTERPRETATION**\n", "").trim()
+    } else if (section.includes("**SUGGESTED ACTION**")) {
+      acc.action = section.replace("**SUGGESTED ACTION**\n", "").trim()
+    }
+    return acc
+  }, { evidence: "", interpretation: "", action: "" })
+
   return (
     <Card className={cn(
       "border-border/50 overflow-hidden transition-all duration-500",
@@ -236,30 +276,70 @@ export function AIInsightsPanel({ result, inputValues }: AIInsightsPanelProps) {
               </div>
             </div>
             <div>
-              <CardTitle className="text-sm font-semibold">AI Insight Analysis</CardTitle>
-              <p className="text-xs text-muted-foreground">Intelligent system assessment</p>
+              <CardTitle className="text-sm font-semibold">Engineering Assessment</CardTitle>
+              <p className="text-xs text-muted-foreground">Metric-backed analysis</p>
             </div>
           </div>
           <Badge variant="outline" className="text-[10px] font-medium bg-primary/5 text-primary border-primary/20">
-            AI-Powered
+            Analysis
           </Badge>
         </div>
       </CardHeader>
       
-      <CardContent className="pt-5 space-y-6">
-        {/* Main AI Insight Paragraph */}
-        <div className="relative rounded-lg bg-gradient-to-br from-muted/50 to-muted/20 p-4 border border-border/50">
-          <div className="absolute -left-px top-4 h-12 w-1 rounded-full bg-primary" />
-          <p className="text-sm leading-relaxed text-foreground/90 pl-3">
-            {insight.split("**").map((part, index) => 
-              index % 2 === 1 ? (
-                <span key={index} className="font-semibold text-foreground">{part}</span>
-              ) : (
-                <span key={index}>{part}</span>
-              )
-            )}
-          </p>
-        </div>
+      <CardContent className="pt-5 space-y-4">
+        {/* Evidence Section */}
+        {insightSections.evidence && (
+          <div className="space-y-2">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Evidence</h4>
+            <div className="rounded-lg bg-blue-500/5 border border-blue-500/20 p-3">
+              <p className="text-sm text-foreground/85 leading-relaxed">
+                {insightSections.evidence.split("**").map((part, index) => 
+                  index % 2 === 1 ? (
+                    <span key={index} className="font-semibold text-foreground">{part}</span>
+                  ) : (
+                    <span key={index}>{part}</span>
+                  )
+                )}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Interpretation Section */}
+        {insightSections.interpretation && (
+          <div className="space-y-2">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Interpretation</h4>
+            <div className="rounded-lg bg-amber-500/5 border border-amber-500/20 p-3">
+              <p className="text-sm text-foreground/85 leading-relaxed">
+                {insightSections.interpretation.split("**").map((part, index) => 
+                  index % 2 === 1 ? (
+                    <span key={index} className="font-semibold text-foreground">{part}</span>
+                  ) : (
+                    <span key={index}>{part}</span>
+                  )
+                )}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Suggested Action Section */}
+        {insightSections.action && (
+          <div className="space-y-2">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Suggested Action</h4>
+            <div className="rounded-lg bg-emerald-500/5 border border-emerald-500/20 p-3">
+              <p className="text-sm text-foreground/85 leading-relaxed">
+                {insightSections.action.split("**").map((part, index) => 
+                  index % 2 === 1 ? (
+                    <span key={index} className="font-semibold text-foreground">{part}</span>
+                  ) : (
+                    <span key={index}>{part}</span>
+                  )
+                )}
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Primary Risk Driver */}
         {dominantFactor.status !== "good" && (
