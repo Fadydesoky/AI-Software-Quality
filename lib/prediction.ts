@@ -348,7 +348,7 @@ export function validateInputs(input: PredictionInput): InputValidation[] {
   return validations
 }
 
-export function predictQuality(input: PredictionInput): PredictionResult {
+export function predictQuality(input: PredictionInput, fileAnalysis?: any): PredictionResult {
   const { commits, bugs, complexity, developers, coverage } = input
 
   // Prevent division by zero
@@ -455,8 +455,20 @@ export function predictQuality(input: PredictionInput): PredictionResult {
   // Calculate risk categories
   const riskCategories = calculateRiskCategories(input, bugDensity, breakdown)
 
-  // Generate recommendations
-  const recommendations = generateRecommendations(input, bugDensity, score)
+  // Generate recommendations (using file-level data if available)
+  let recommendations = generateRecommendations(input, bugDensity, score)
+  
+  // Add file-specific hotspot recommendations if file analysis available
+  if (fileAnalysis && fileAnalysis.hotspots && fileAnalysis.hotspots.length > 0) {
+    const topHotspot = fileAnalysis.hotspots[0]
+    recommendations.unshift({
+      priority: topHotspot.riskScore > 80 ? "high" : "medium",
+      metric: "Complexity Hotspot",
+      action: `Refactor ${topHotspot.path.split('/').pop()} (complexity: ${topHotspot.complexity})`,
+      impact: `Address top risk file (score: ${topHotspot.riskScore})`,
+      targetValue: `Reduce complexity to < 15`,
+    })
+  }
 
   // Store formulas for display
   const formulas = {

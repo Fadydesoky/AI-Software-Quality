@@ -112,8 +112,8 @@ function AnalyzeContent() {
 
   // Live "what-if" analysis - update score as inputs change
   const liveResult = React.useMemo(() => {
-    return predictQuality(inputValues)
-  }, [inputValues])
+    return predictQuality(inputValues, fileAnalysis || undefined)
+  }, [inputValues, fileAnalysis])
 
   // Input validation
   const validations = React.useMemo(() => {
@@ -133,7 +133,7 @@ function AnalyzeContent() {
     setIsLoading(true)
     
     setTimeout(() => {
-      const prediction = predictQuality(inputValues)
+      const prediction = predictQuality(inputValues, fileAnalysis || undefined)
       
       // Store previous score for comparison
       if (result) {

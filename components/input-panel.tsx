@@ -121,12 +121,32 @@ export function InputPanel({
         const { commits, contributorsCount, openIssues, closedIssues, fileAnalysis } = result.data
 
         // Calculate metrics from GitHub data
+        // Estimate complexity and coverage from file analysis
+        let estimatedComplexity = values.complexity
+        let estimatedCoverage = values.coverage
+        
+        if (fileAnalysis) {
+          // Map average complexity (0-30 scale) to 1-10 scale
+          estimatedComplexity = Math.round((fileAnalysis.averageComplexity / 30) * 10)
+          estimatedComplexity = Math.max(1, Math.min(10, estimatedComplexity))
+          
+          // Risk level suggests coverage (High = low coverage, Low = high coverage)
+          if (fileAnalysis.riskLevel === "High") {
+            estimatedCoverage = Math.max(20, values.coverage)
+          } else if (fileAnalysis.riskLevel === "Medium") {
+            estimatedCoverage = Math.max(50, values.coverage)
+          } else {
+            estimatedCoverage = Math.max(70, values.coverage)
+          }
+        }
+        
         const updatedValues: PredictionInput = {
           ...values,
           commits: Math.max(commits, 1),
           bugs: openIssues + closedIssues,
           developers: Math.max(contributorsCount, 1),
-          // Complexity and coverage remain as manual input (unavailable from GitHub API)
+          complexity: estimatedComplexity,
+          coverage: estimatedCoverage,
         }
 
         onChange(updatedValues)
