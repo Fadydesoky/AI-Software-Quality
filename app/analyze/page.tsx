@@ -393,10 +393,10 @@ function AnalyzeContent() {
             )}
 
             {/* Smart Recommendations */}
-            {result && (
+            {liveResult && (
               <div className="animate-fade-in">
                 <Recommendations 
-                  recommendations={result.recommendations} 
+                  recommendations={liveResult.recommendations} 
                   isAdvancedMode={isAdvancedMode}
                   repoUrl={currentRepoUrl}
                 />
