@@ -3,18 +3,21 @@
 import * as React from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { AlertTriangle, CheckCircle2, AlertCircle, Shield, TrendingUp, Bug, Code2, Users } from "lucide-react"
+import { AlertTriangle, CheckCircle2, AlertCircle, Shield, TrendingUp, Bug, Code2, Users, GitBranch } from "lucide-react"
 import { cn } from "@/lib/utils"
-import type { PredictionResult } from "@/lib/prediction"
+import type { PredictionInput, PredictionResult } from "@/lib/prediction"
 import { getRiskColor, getBadgeVariant } from "@/lib/prediction"
 import { ScoreGauge } from "./score-gauge"
+import { DataSourceIndicator } from "./data-source-indicator"
 
 interface ResultsCardProps {
   result: PredictionResult | null
   previousScore?: number
+  inputValues?: PredictionInput
+  repoUrl?: string
 }
 
-export function ResultsCard({ result, previousScore }: ResultsCardProps) {
+export function ResultsCard({ result, previousScore, inputValues, repoUrl }: ResultsCardProps) {
   if (!result) {
     return (
       <Card className="border-border/50 border-dashed">
@@ -58,6 +61,29 @@ export function ResultsCard({ result, previousScore }: ResultsCardProps) {
         </CardContent>
       </Card>
 
+      {/* Data Sources Section */}
+      {repoUrl && (
+        <Card className="border-blue-200/50 dark:border-blue-800/50 bg-blue-500/5">
+          <CardContent className="py-4">
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <GitBranch className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                <p className="text-sm font-medium text-blue-600 dark:text-blue-400">
+                  Repository Analysis
+                </p>
+              </div>
+              <div className="text-xs text-muted-foreground break-all">
+                {repoUrl}
+              </div>
+              <div className="flex flex-wrap gap-2 pt-2">
+                <DataSourceIndicator source="github" repoUrl={repoUrl} compact />
+                <span className="text-xs text-muted-foreground">Auto-fetched from GitHub API</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Quick Stats */}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {[
@@ -66,6 +92,7 @@ export function ResultsCard({ result, previousScore }: ResultsCardProps) {
             label: "Bug Density", 
             value: result.metrics.bugDensity,
             status: result.breakdown.bugDensity.status,
+            source: repoUrl ? "github" : "manual",
           },
           { 
             icon: TrendingUp, 
@@ -73,6 +100,7 @@ export function ResultsCard({ result, previousScore }: ResultsCardProps) {
             value: result.metrics.productivity,
             suffix: "c/dev",
             status: "good" as const,
+            source: repoUrl ? "github" : "manual",
           },
           { 
             icon: Code2, 
@@ -80,6 +108,7 @@ export function ResultsCard({ result, previousScore }: ResultsCardProps) {
             value: `${result.metrics.complexity}`,
             suffix: "/10",
             status: result.breakdown.complexity.status,
+            source: "manual",
           },
           { 
             icon: Users, 
@@ -87,8 +116,9 @@ export function ResultsCard({ result, previousScore }: ResultsCardProps) {
             value: `${result.metrics.coverage}`,
             suffix: "%",
             status: result.breakdown.coverage.status,
+            source: "manual",
           },
-        ].map(({ icon: Icon, label, value, suffix, status }) => (
+        ].map(({ icon: Icon, label, value, suffix, status, source }) => (
           <Card 
             key={label} 
             className={cn(
@@ -96,22 +126,36 @@ export function ResultsCard({ result, previousScore }: ResultsCardProps) {
               "group"
             )}
           >
-            <CardContent className="flex items-center gap-3 py-4">
-              <div className={cn(
-                "flex h-9 w-9 items-center justify-center rounded-lg transition-colors",
-                status === "good" && "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
-                status === "warning" && "bg-amber-500/10 text-amber-600 dark:text-amber-400",
-                status === "bad" && "bg-red-500/10 text-red-600 dark:text-red-400"
-              )}>
-                <Icon className="h-4 w-4" />
+            <CardContent className="py-4">
+              <div className="flex items-start justify-between gap-2 mb-2">
+                <div className="flex items-center gap-3 flex-1">
+                  <div className={cn(
+                    "flex h-9 w-9 items-center justify-center rounded-lg transition-colors",
+                    status === "good" && "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+                    status === "warning" && "bg-amber-500/10 text-amber-600 dark:text-amber-400",
+                    status === "bad" && "bg-red-500/10 text-red-600 dark:text-red-400"
+                  )}>
+                    <Icon className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">{label}</p>
+                    <p className="text-base font-bold tabular-nums">
+                      {value}
+                      {suffix && <span className="text-xs font-normal text-muted-foreground">{suffix}</span>}
+                    </p>
+                  </div>
+                </div>
               </div>
-              <div>
-                <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">{label}</p>
-                <p className="text-base font-bold tabular-nums">
-                  {value}
-                  {suffix && <span className="text-xs font-normal text-muted-foreground">{suffix}</span>}
-                </p>
-              </div>
+              {repoUrl && (["Commits", "Total Issues", "Contributors"].includes(label) || label === "Bugs Density") && (
+                <div className="pt-2">
+                  <DataSourceIndicator source="github" compact tooltipText="Fetched from GitHub API" />
+                </div>
+              )}
+              {!repoUrl && (
+                <div className="pt-2">
+                  <DataSourceIndicator source="manual" compact tooltipText="Manually entered" />
+                </div>
+              )}
             </CardContent>
           </Card>
         ))}

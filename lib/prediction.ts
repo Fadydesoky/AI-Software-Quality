@@ -1,9 +1,23 @@
+export interface MetricSource {
+  type: "github" | "manual" | "unavailable"
+  repoUrl?: string
+  timestamp?: number
+  confidence?: "high" | "medium" | "low"
+}
+
 export interface PredictionInput {
   commits: number
   bugs: number
   complexity: number
   developers: number
   coverage: number
+  sources?: {
+    commits?: MetricSource
+    bugs?: MetricSource
+    complexity?: MetricSource
+    developers?: MetricSource
+    coverage?: MetricSource
+  }
 }
 
 export interface ScoreBreakdown {
@@ -81,6 +95,7 @@ export interface HistoryEntry extends PredictionInput {
   timestamp: number
   risk: "High" | "Medium" | "Low"
   score: number
+  repoUrl?: string
 }
 
 export interface InputValidation {

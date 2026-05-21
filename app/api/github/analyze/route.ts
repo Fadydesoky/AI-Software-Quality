@@ -1,0 +1,206 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { getGitHubRepoApiUrl, type GitHubRepoData, type GitHubAnalyzeError } from '@/lib/github'
+
+interface GitHubApiResponse {
+  success: boolean
+  data?: GitHubRepoData
+  error?: GitHubAnalyzeError
+}
+
+// Fetch the number of commits for a repository
+async function getCommitCount(owner: string, repo: string): Promise<number> {
+  const url = `${getGitHubRepoApiUrl(owner, repo)}/commits?per_page=1`
+  const response = await fetch(url, {
+    headers: {
+      Accept: 'application/vnd.github.v3+json',
+    },
+  })
+
+  if (!response.ok) {
+    if (response.status === 404) {
+      throw { type: 'repo-not-found', message: 'Repository not found' }
+    }
+    if (response.status === 403) {
+      throw { type: 'rate-limit', message: 'API rate limit exceeded' }
+    }
+    throw { type: 'api-error', message: 'Failed to fetch commits', statusCode: response.status }
+  }
+
+  // GitHub returns commit count in the Link header when per_page=1
+  const linkHeader = response.headers.get('link')
+  if (linkHeader) {
+    const match = linkHeader.match(/&page=(\d+)>; rel="last"/)
+    if (match) {
+      return parseInt(match[1], 10)
+    }
+  }
+
+  return 0
+}
+
+// Fetch the number of contributors
+async function getContributorCount(owner: string, repo: string): Promise<number> {
+  const url = `${getGitHubRepoApiUrl(owner, repo)}/contributors?per_page=1`
+  const response = await fetch(url, {
+    headers: {
+      Accept: 'application/vnd.github.v3+json',
+    },
+  })
+
+  if (!response.ok) {
+    if (response.status === 404) {
+      return 0 // No contributors data
+    }
+    throw { type: 'api-error', message: 'Failed to fetch contributors' }
+  }
+
+  const linkHeader = response.headers.get('link')
+  if (linkHeader) {
+    const match = linkHeader.match(/&page=(\d+)>; rel="last"/)
+    if (match) {
+      return parseInt(match[1], 10)
+    }
+  }
+
+  return 0
+}
+
+// Fetch issues (open and closed)
+async function getIssueStats(owner: string, repo: string): Promise<{ open: number; closed: number }> {
+  const url = `${getGitHubRepoApiUrl(owner, repo)}/issues?state=all&per_page=1`
+  const response = await fetch(url, {
+    headers: {
+      Accept: 'application/vnd.github.v3+json',
+    },
+  })
+
+  if (!response.ok) {
+    return { open: 0, closed: 0 }
+  }
+
+  // Fetch open issues count
+  const openUrl = `${getGitHubRepoApiUrl(owner, repo)}/issues?state=open&per_page=1`
+  const openResponse = await fetch(openUrl, {
+    headers: {
+      Accept: 'application/vnd.github.v3+json',
+    },
+  })
+
+  let openCount = 0
+  if (openResponse.ok) {
+    const openLinkHeader = openResponse.headers.get('link')
+    if (openLinkHeader) {
+      const match = openLinkHeader.match(/&page=(\d+)>; rel="last"/)
+      if (match) {
+        openCount = parseInt(match[1], 10)
+      }
+    }
+  }
+
+  // Get closed count from all issues
+  let totalCount = 0
+  if (response.ok) {
+    const linkHeader = response.headers.get('link')
+    if (linkHeader) {
+      const match = linkHeader.match(/&page=(\d+)>; rel="last"/)
+      if (match) {
+        totalCount = parseInt(match[1], 10)
+      }
+    }
+  }
+
+  return {
+    open: openCount,
+    closed: Math.max(0, totalCount - openCount),
+  }
+}
+
+// Fetch basic repository information
+async function getRepoInfo(owner: string, repo: string): Promise<{ language: string | null; stars: number; mainBranch: string }> {
+  const url = getGitHubRepoApiUrl(owner, repo)
+  const response = await fetch(url, {
+    headers: {
+      Accept: 'application/vnd.github.v3+json',
+    },
+  })
+
+  if (!response.ok) {
+    return { language: null, stars: 0, mainBranch: 'main' }
+  }
+
+  const data = await response.json()
+  return {
+    language: data.language,
+    stars: data.stargazers_count || 0,
+    mainBranch: data.default_branch || 'main',
+  }
+}
+
+export async function POST(request: NextRequest): Promise<NextResponse<GitHubApiResponse>> {
+  try {
+    const body = await request.json()
+    const { owner, repo } = body
+
+    if (!owner || !repo) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            type: 'invalid-url',
+            message: 'Owner and repo are required',
+          },
+        },
+        { status: 400 }
+      )
+    }
+
+    // Fetch all data in parallel
+    const [commits, contributors, issues, repoInfo] = await Promise.all([
+      getCommitCount(owner, repo),
+      getContributorCount(owner, repo),
+      getIssueStats(owner, repo),
+      getRepoInfo(owner, repo),
+    ]).catch((error) => {
+      throw error
+    })
+
+    const data: GitHubRepoData = {
+      commits: Math.max(commits, 1),
+      contributorsCount: Math.max(contributors, 1),
+      openIssues: issues.open,
+      closedIssues: issues.closed,
+      language: repoInfo.language,
+      stars: repoInfo.stars,
+      mainBranch: repoInfo.mainBranch,
+    }
+
+    return NextResponse.json({
+      success: true,
+      data,
+    })
+  } catch (error: unknown) {
+    console.error('[v0] GitHub API error:', error)
+
+    const errorPayload = error as GitHubAnalyzeError
+    if (errorPayload?.type) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: errorPayload,
+        },
+        { status: 400 }
+      )
+    }
+
+    return NextResponse.json(
+      {
+        success: false,
+        error: {
+          type: 'network-error',
+          message: 'Failed to fetch repository data',
+        },
+      },
+      { status: 500 }
+    )
+  }
+}

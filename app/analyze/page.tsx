@@ -61,6 +61,7 @@ function AnalyzeContent() {
   const [selectedIds, setSelectedIds] = React.useState<string[]>([])
   const [comparisonEntries, setComparisonEntries] = React.useState<[HistoryEntry, HistoryEntry] | null>(null)
   const [isAdvancedMode, setIsAdvancedMode] = React.useState(false)
+  const [currentRepoUrl, setCurrentRepoUrl] = React.useState<string | undefined>(undefined)
 
   // Live "what-if" analysis - update score as inputs change
   const liveResult = React.useMemo(() => {
@@ -100,6 +101,7 @@ function AnalyzeContent() {
         ...inputValues,
         risk: prediction.risk,
         score: prediction.score,
+        repoUrl: currentRepoUrl,
       }
       
       setHistory(prev => [...prev, entry])
@@ -197,6 +199,7 @@ function AnalyzeContent() {
                 onPredict={handlePredict}
                 isLoading={isLoading}
                 disabled={hasErrors}
+                onRepoUrlChange={setCurrentRepoUrl}
               />
             </div>
 
@@ -275,7 +278,7 @@ function AnalyzeContent() {
               </div>
             )}
             
-            <ResultsCard result={result} previousScore={previousScore} />
+            <ResultsCard result={result} previousScore={previousScore} inputValues={inputValues} repoUrl={currentRepoUrl} />
             
             {/* Risk Breakdown (Advanced Mode) */}
             {result && isAdvancedMode && (
