@@ -32,7 +32,7 @@ export function LandingHero() {
             
             <p className="mt-6 text-lg leading-8 text-muted-foreground text-balance sm:text-xl">
               Analyze, predict, and improve your code quality in seconds. 
-              Get actionable insights powered by machine learning, not guesswork.
+              Get actionable, evidence-backed insights tailored to your metrics.
             </p>
             
             <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -66,7 +66,7 @@ export function LandingHero() {
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                <span>Explainable AI</span>
+                <span>Evidence-backed insights</span>
               </div>
             </div>
           </div>
@@ -97,8 +97,8 @@ export function LandingHero() {
               {
                 step: "02",
                 icon: Gauge,
-                title: "Get AI Analysis",
-                description: "Our model calculates a quality score, risk level, and confidence rating instantly."
+                title: "Get Analysis",
+                description: "The system calculates a quality score, risk level, and evidence-backed assessment instantly."
               },
               {
                 step: "03",

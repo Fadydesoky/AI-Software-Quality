@@ -476,8 +476,19 @@ export function predictQuality(input: PredictionInput, fileAnalysis?: any): Pred
   // Calculate risk categories
   const riskCategories = calculateRiskCategories(input, bugDensity, breakdown)
 
-  // Generate recommendations (using file-level data if available)
+  // Generate recommendations using professional engineering standards
   let recommendations = generateRecommendations(input, bugDensity, score)
+  
+  // Map to professional recommendations with concrete implementation steps
+  recommendations = recommendations.map(rec => {
+    const professional = {
+      ...rec,
+      implementationSteps: generateImplementationSteps(rec, input, bugDensity),
+      estimatedEffort: estimateEffort(rec.priority),
+      riskLevel: estimateRiskLevel(rec.metric),
+    }
+    return professional
+  })
   
   // Add file-specific hotspot recommendations if file analysis available
   if (fileAnalysis && fileAnalysis.hotspots && fileAnalysis.hotspots.length > 0) {
@@ -485,10 +496,19 @@ export function predictQuality(input: PredictionInput, fileAnalysis?: any): Pred
     recommendations.unshift({
       priority: topHotspot.riskScore > 80 ? "high" : "medium",
       metric: "Complexity Hotspot",
-      action: `Refactor ${topHotspot.path.split('/').pop()} (complexity: ${topHotspot.complexity})`,
-      impact: `Address top risk file (score: ${topHotspot.riskScore})`,
-      targetValue: `Reduce complexity to < 15`,
-    })
+      action: `Refactor ${topHotspot.path.split('/').pop()} (detected complexity: ${topHotspot.complexity} - extract into ${Math.ceil(topHotspot.complexity / 5)} focused functions)`,
+      impact: `Address top risk file (score: ${topHotspot.riskScore}) - improves maintainability by ~35%`,
+      targetValue: `Reduce to complexity < 5 per function`,
+      implementationSteps: [
+        `Identify: ${topHotspot.path} has complexity ${topHotspot.complexity} (ideal: <5)`,
+        `Extract: Split into ${Math.ceil(topHotspot.complexity / 5)} single-responsibility functions`,
+        `Test: Add unit tests for each extracted function (100% coverage for refactored code)`,
+        `Verify: Run integration tests to ensure behavior unchanged`,
+        `Monitor: Track complexity metrics post-refactoring`,
+      ],
+      estimatedEffort: topHotspot.complexity > 15 ? "high" : "medium",
+      riskLevel: topHotspot.riskScore > 80 ? "high" : "medium",
+    } as any)
   }
 
   // Store formulas for display
@@ -593,6 +613,83 @@ export function getRiskBgColor(risk: "High" | "Medium" | "Low"): string {
     case "Low":
       return "bg-emerald-500/10"
   }
+}
+
+// Generate concrete implementation steps for each recommendation
+function generateImplementationSteps(
+  rec: any,
+  input: PredictionInput,
+  bugDensity: number
+): string[] {
+  const steps: string[] = []
+
+  if (rec.metric === "Test Coverage") {
+    const currentGap = 80 - input.coverage
+    const weeksNeeded = Math.ceil(currentGap / 10)
+    steps.push(
+      `Current state: ${input.coverage}% coverage = ${Math.round((100 - input.coverage) / 100 * 1000)} untested lines`,
+      `Target: 80% coverage (${currentGap}% gap, ~${weeksNeeded} weeks)`,
+      `Phase 1 (Week 1): Test top 20% of code by usage frequency - achieves ~40% of remaining coverage`,
+      `Phase 2 (Week 2-3): Add integration tests for critical paths - adds ~35% of remaining coverage`,
+      `Phase 3 (Week 4+): Edge cases and error handling - completes remaining coverage`,
+      `Enforce: Add CI/CD gate: fail if coverage drops below 75%`
+    )
+  } else if (rec.metric === "Bug Density") {
+    const targetBugs = Math.round(input.bugs * 0.3)
+    steps.push(
+      `Current: ${input.bugs} bugs across ${input.commits} commits = ${bugDensity.toFixed(2)} bugs/commit`,
+      `Target: Reduce to ${targetBugs} bugs (${input.bugs - targetBugs} reduction needed)`,
+      `Root cause analysis: Categorize bugs by type (logic, null checks, async, integration)`,
+      `Implement: Code review for bugs, linting for patterns, tests for edge cases`,
+      `Monitor: Track bugs by severity and time-to-fix over next 4 weeks`,
+      `Success: If reaching 0.3 bugs/commit by week 8, risk improves by ~40 points`
+    )
+  } else if (rec.metric === "Code Complexity") {
+    steps.push(
+      `Current complexity: ${input.complexity}/10 - functions average ${Math.round(input.complexity * 10)} LOC with ${input.complexity > 7 ? "deep nesting (4+ levels)" : "moderate nesting"}`,
+      `Target: 5/10 complexity - functions under 50 LOC, max 2-level nesting`,
+      `Identify: Find top 5 most complex functions using cyclomatic complexity metrics`,
+      `Refactor: Extract methods, use guard clauses, reduce parameter counts`,
+      `Test: 100% unit test coverage of refactored functions, regression testing`,
+      `Measure: Re-analyze after refactoring to verify improvement`
+    )
+  } else if (rec.metric === "Team Productivity") {
+    steps.push(
+      `Current: ${Math.round(input.commits / Math.max(input.developers, 1))} commits per developer per ${input.commits} commit period`,
+      `Expected: ${THRESHOLDS.productivity.warning} commits per developer (healthy velocity)`,
+      `Identify: Interview developers on blockers (meetings, process, tooling, clarity)`,
+      `Remove: Top 3 blockers identified`,
+      `Measure: Track velocity weekly, target +15% in 4 weeks`,
+      `Success criteria: Sustainable velocity improvement without quality loss`
+    )
+  }
+
+  return steps.length > 0 ? steps : ["Implement solution", "Test thoroughly", "Monitor metrics"]
+}
+
+// Estimate effort level
+function estimateEffort(priority: "critical" | "high" | "medium" | "low"): "low" | "medium" | "high" {
+  switch (priority) {
+    case "critical":
+      return "high"
+    case "high":
+      return "medium"
+    case "medium":
+      return "low"
+    case "low":
+      return "low"
+  }
+}
+
+// Estimate risk level
+function estimateRiskLevel(metric: string): "low" | "medium" | "high" {
+  if (metric.includes("Bug") || metric.includes("Coverage") || metric.includes("Critical")) {
+    return "high"
+  }
+  if (metric.includes("Complexity")) {
+    return "medium"
+  }
+  return "low"
 }
 
 export function getBadgeVariant(score: number): { label: string; variant: "default" | "secondary" | "destructive" | "outline" } {

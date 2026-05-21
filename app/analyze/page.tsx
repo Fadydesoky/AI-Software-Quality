@@ -246,7 +246,7 @@ function AnalyzeContent() {
                 <span className="text-lg font-semibold tracking-tight hidden sm:block">Quality Predictor</span>
                 <span className="ml-2 hidden lg:inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
                   <Sparkles className="h-3 w-3" />
-                  AI-Powered
+                  Analysis Engine
                 </span>
               </div>
             </div>
@@ -393,10 +393,10 @@ function AnalyzeContent() {
             )}
 
             {/* Smart Recommendations */}
-            {result && (
+            {liveResult && (
               <div className="animate-fade-in">
                 <Recommendations 
-                  recommendations={result.recommendations} 
+                  recommendations={liveResult.recommendations} 
                   isAdvancedMode={isAdvancedMode}
                   repoUrl={currentRepoUrl}
                 />

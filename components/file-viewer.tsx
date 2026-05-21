@@ -4,19 +4,26 @@ import * as React from "react"
 import { Loader2, AlertCircle, Copy, Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { analyzeCodeStructure, type StructuralFinding } from "@/lib/code-structure-analyzer"
+import { RefactorPreview } from "@/components/refactor-preview"
 
 interface FileViewerProps {
   owner: string
   repo: string
   filePath: string
   branch: string
+  showFindings?: boolean
+  highlightedFinding?: StructuralFinding | null
 }
 
-export function FileViewer({ owner, repo, filePath, branch }: FileViewerProps) {
+export function FileViewer({ owner, repo, filePath, branch, showFindings = true, highlightedFinding }: FileViewerProps) {
   const [content, setContent] = React.useState<string | null>(null)
   const [loading, setLoading] = React.useState(true)
   const [error, setError] = React.useState<string | null>(null)
   const [copied, setCopied] = React.useState(false)
+  const [findings, setFindings] = React.useState<StructuralFinding[]>([])
+  const [expandedFindings, setExpandedFindings] = React.useState<Set<number>>(new Set())
+  const [selectedFindingForRefactor, setSelectedFindingForRefactor] = React.useState<number | null>(null)
 
   React.useEffect(() => {
     const fetchFile = async () => {
@@ -45,6 +52,18 @@ export function FileViewer({ owner, repo, filePath, branch }: FileViewerProps) {
 
         const text = await response.text()
         setContent(text)
+
+        // Analyze code structure to find evidence-backed findings
+        if (showFindings) {
+          try {
+            const analysis = analyzeCodeStructure(text, undefined, filePath)
+            setFindings(analysis.findings)
+          } catch (err) {
+            // Silently fail on analysis - don't break the file viewer
+            console.log("[v0] Code structure analysis failed (non-critical)")
+            setFindings([])
+          }
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to fetch file")
         setContent(null)
@@ -54,7 +73,7 @@ export function FileViewer({ owner, repo, filePath, branch }: FileViewerProps) {
     }
 
     fetchFile()
-  }, [owner, repo, filePath, branch])
+  }, [owner, repo, filePath, branch, showFindings])
 
   if (loading) {
     return (
@@ -86,10 +105,38 @@ export function FileViewer({ owner, repo, filePath, branch }: FileViewerProps) {
   const lines = content.split("\n")
   const maxLineNumber = lines.length.toString().length
 
+  // Check if a line is in a problematic region
+  const isLineHighlighted = (lineNum: number) => {
+    return findings.some(f => lineNum >= f.lineRange.start && lineNum <= f.lineRange.end)
+  }
+
+  // Get severity color for a highlighted line
+  const getLineColor = (lineNum: number) => {
+    const finding = findings.find(f => lineNum >= f.lineRange.start && lineNum <= f.lineRange.end)
+    if (!finding) return ''
+    switch (finding.severity) {
+      case 'critical':
+        return 'bg-red-500/20 border-l-2 border-red-500'
+      case 'high':
+        return 'bg-orange-500/15 border-l-2 border-orange-500'
+      case 'medium':
+        return 'bg-yellow-500/10 border-l-2 border-yellow-500'
+      default:
+        return 'bg-blue-500/10 border-l-2 border-blue-500'
+    }
+  }
+
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <p className="text-xs font-medium text-muted-foreground">{filePath}</p>
+        <div>
+          <p className="text-xs font-medium text-muted-foreground">{filePath}</p>
+          {findings.length > 0 && (
+            <p className="text-xs text-orange-600 mt-1">
+              {findings.length} structural finding{findings.length !== 1 ? 's' : ''} detected
+            </p>
+          )}
+        </div>
         <Button
           variant="ghost"
           size="sm"
@@ -113,19 +160,90 @@ export function FileViewer({ owner, repo, filePath, branch }: FileViewerProps) {
         </Button>
       </div>
 
-      <div className="overflow-x-auto rounded-lg border border-border bg-muted/30 p-4">
-        <pre className="font-mono text-xs leading-relaxed">
-          {lines.map((line, idx) => (
-            <div key={idx} className="flex">
-              <span
-                className="inline-block w-12 shrink-0 select-none text-right text-muted-foreground pr-4"
-                style={{ minWidth: `${(maxLineNumber + 1) * 0.6}em` }}
+      {/* Findings List */}
+      {findings.length > 0 && showFindings && (
+        <div className="space-y-2 bg-muted/20 border border-border rounded-lg p-3">
+          <p className="text-xs font-semibold text-foreground">Structural Findings</p>
+          {findings.map((finding, idx) => (
+            <div key={idx} className="space-y-2">
+              <button
+                onClick={() => {
+                  const newExpanded = new Set(expandedFindings)
+                  if (newExpanded.has(idx)) {
+                    newExpanded.delete(idx)
+                  } else {
+                    newExpanded.add(idx)
+                  }
+                  setExpandedFindings(newExpanded)
+                }}
+                className={cn(
+                  "w-full text-left text-xs p-2 rounded border transition-colors",
+                  finding.severity === 'critical' ? 'bg-red-500/10 border-red-500/30 hover:bg-red-500/15' :
+                  finding.severity === 'high' ? 'bg-orange-500/10 border-orange-500/30 hover:bg-orange-500/15' :
+                  finding.severity === 'medium' ? 'bg-yellow-500/10 border-yellow-500/30 hover:bg-yellow-500/15' :
+                  'bg-blue-500/10 border-blue-500/30 hover:bg-blue-500/15'
+                )}
               >
-                {idx + 1}
-              </span>
-              <span className="text-foreground break-all">{line}</span>
+                <div className="font-semibold">
+                  Lines {finding.lineRange.start}–{finding.lineRange.end}: {finding.type.replace('-', ' ')}
+                </div>
+                <div className="text-muted-foreground mt-1">{finding.evidence}</div>
+                {expandedFindings.has(idx) && (
+                  <div className="mt-2 pt-2 border-t border-current/20 space-y-1">
+                    <div><span className="font-semibold">Why: </span>{finding.interpretation}</div>
+                    <div><span className="font-semibold">Action: </span>{finding.suggestedAction}</div>
+                  </div>
+                )}
+              </button>
+              
+              {/* Refactor Preview Button */}
+              <button
+                onClick={() => setSelectedFindingForRefactor(selectedFindingForRefactor === idx ? null : idx)}
+                className="w-full text-left text-xs p-2 rounded border border-primary/30 bg-primary/5 hover:bg-primary/10 transition-colors text-primary font-medium"
+              >
+                {selectedFindingForRefactor === idx ? 'Hide Refactor' : 'Show Refactor'}
+              </button>
+              
+              {/* Refactor Preview Content */}
+              {selectedFindingForRefactor === idx && content && (
+                <div className="p-3 rounded-lg border border-primary/20 bg-primary/5">
+                  <RefactorPreview
+                    fileContent={content}
+                    finding={finding}
+                    filePath={filePath}
+                    language="typescript"
+                  />
+                </div>
+              )}
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Code Viewer */}
+      <div className="overflow-x-auto rounded-lg border border-border bg-muted/30 p-4">
+        <pre className="font-mono text-xs leading-relaxed">
+          {lines.map((line, idx) => {
+            const lineNum = idx + 1
+            const highlighted = isLineHighlighted(lineNum)
+            return (
+              <div
+                key={idx}
+                className={cn(
+                  "flex",
+                  highlighted ? getLineColor(lineNum) : ''
+                )}
+              >
+                <span
+                  className="inline-block w-12 shrink-0 select-none text-right text-muted-foreground pr-4"
+                  style={{ minWidth: `${(maxLineNumber + 1) * 0.6}em` }}
+                >
+                  {lineNum}
+                </span>
+                <span className="text-foreground break-all">{line}</span>
+              </div>
+            )
+          })}
         </pre>
       </div>
 

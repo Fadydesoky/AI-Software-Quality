@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge"
 import { ExternalLink, AlertCircle, CheckCircle2, TrendingUp, Target, Code2 } from "lucide-react"
 import { FileViewer } from "@/components/file-viewer"
 import { CodeGenerator } from "@/components/code-generator"
+import { CodeInputViewer } from "@/components/code-input-viewer"
 import { cn } from "@/lib/utils"
 import type { Recommendation } from "@/lib/prediction"
 
@@ -54,6 +55,7 @@ export function RecommendationModal({
 }: RecommendationModalProps) {
   // All hooks must be called unconditionally, before any early returns
   const [showFileViewer, setShowFileViewer] = React.useState(false)
+  const [showCodeInput, setShowCodeInput] = React.useState(false)
   const [defaultBranch, setDefaultBranch] = React.useState("main")
   const [owner, setOwner] = React.useState("")
   const [repo, setRepo] = React.useState("")
@@ -127,7 +129,7 @@ export function RecommendationModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1">
@@ -226,41 +228,105 @@ export function RecommendationModal({
             )}
           </div>
 
-          {/* Code Generator - Always Available */}
+          {/* Implementation Steps - If available */}
+          {(recommendation as any).implementationSteps && (recommendation as any).implementationSteps.length > 0 && (
+            <div className="space-y-3 border-t pt-6">
+              <h3 className="font-semibold flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-blue-500" />
+                Implementation Steps
+              </h3>
+              <div className="space-y-2">
+                {(recommendation as any).implementationSteps.map((step: string, idx: number) => (
+                  <div key={idx} className="flex gap-3 text-sm">
+                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-500/10 text-xs font-semibold text-blue-600">
+                      {idx + 1}
+                    </div>
+                    <p className="pt-0.5 text-muted-foreground leading-relaxed">{step}</p>
+                  </div>
+                ))}
+              </div>
+              {(recommendation as any).estimatedEffort && (
+                <div className="mt-4 flex items-center gap-2 rounded-lg bg-muted/50 p-3 text-xs">
+                  <span className="text-muted-foreground">Estimated Effort:</span>
+                  <span className="font-semibold capitalize text-foreground">{(recommendation as any).estimatedEffort}</span>
+                  {(recommendation as any).riskLevel && (
+                    <>
+                      <span className="text-muted-foreground">|</span>
+                      <span className="text-muted-foreground">Risk Level:</span>
+                      <span className="font-semibold capitalize text-foreground">{(recommendation as any).riskLevel}</span>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Code Improvements */}
           <div className="space-y-3 border-t pt-6">
             <h3 className="font-semibold flex items-center gap-2">
               <Code2 className="h-4 w-4" />
-              AI-Powered Code Improvements
+              Code Improvements
             </h3>
             <p className="text-sm text-muted-foreground">
-              Get specific code suggestions and examples to address this issue.
+              View suggested code refactoring and implementation patterns.
             </p>
             <CodeGenerator recommendation={recommendation} />
           </div>
 
-          {/* File Viewer - Optional */}
+          {/* Inspect File Section - GitHub File + Code Input */}
           {filename && owner && repo && (
             <div className="space-y-3 border-t pt-6">
-              <div className="flex items-center justify-between">
-                <h3 className="font-semibold flex items-center gap-2">
-                  <Code2 className="h-4 w-4" />
-                  Source Code Review
-                </h3>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowFileViewer(!showFileViewer)}
+              <h3 className="font-semibold flex items-center gap-2">
+                <Code2 className="h-4 w-4" />
+                Inspect File
+              </h3>
+
+              {/* Tab Navigation */}
+              <div className="flex gap-2 border-b border-border">
+                <button
+                  onClick={() => {
+                    setShowFileViewer(true)
+                    setShowCodeInput(false)
+                  }}
+                  className={cn(
+                    "px-3 py-2 text-sm font-medium border-b-2 transition-colors",
+                    showFileViewer && !showCodeInput
+                      ? "border-primary text-primary"
+                      : "border-transparent text-muted-foreground hover:text-foreground"
+                  )}
                 >
-                  {showFileViewer ? "Hide" : "Show"}
-                </Button>
+                  GitHub File
+                </button>
+                <button
+                  onClick={() => {
+                    setShowFileViewer(false)
+                    setShowCodeInput(true)
+                  }}
+                  className={cn(
+                    "px-3 py-2 text-sm font-medium border-b-2 transition-colors",
+                    showCodeInput
+                      ? "border-primary text-primary"
+                      : "border-transparent text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  Paste / Upload
+                </button>
               </div>
-              {showFileViewer && (
+
+              {/* GitHub File Tab */}
+              {showFileViewer && !showCodeInput && (
                 <FileViewer
                   owner={owner}
                   repo={repo}
                   filePath={filename}
                   branch={defaultBranch}
+                  showFindings={true}
                 />
+              )}
+
+              {/* Code Input Tab */}
+              {showCodeInput && !showFileViewer && (
+                <CodeInputViewer />
               )}
             </div>
           )}
