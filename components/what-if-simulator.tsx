@@ -97,12 +97,64 @@ export function WhatIfSimulator({ currentInput }: WhatIfSimulatorProps) {
 
   const handleOptimize = () => {
     setIsAnimating(true)
-    // Suggest optimal values
-    setSimulation({
-      coverage: Math.min(currentInput.coverage + 20, 90),
-      complexity: Math.max(currentInput.complexity - 2, 3),
-      bugs: Math.max(Math.round(currentInput.bugs * 0.7), 0),
+    
+    // Calculate optimal values by simulating improvements and finding best combination
+    let bestScore = currentResult.score
+    let bestSimulation = {
+      coverage: currentInput.coverage,
+      complexity: currentInput.complexity,
+      bugs: currentInput.bugs,
+    }
+
+    // Test different optimization scenarios
+    const scenarios = [
+      // Improve coverage only
+      {
+        coverage: Math.min(currentInput.coverage + 10, 100),
+        complexity: currentInput.complexity,
+        bugs: currentInput.bugs,
+      },
+      // Reduce complexity only
+      {
+        coverage: currentInput.coverage,
+        complexity: Math.max(currentInput.complexity - 1, 1),
+        bugs: currentInput.bugs,
+      },
+      // Reduce bugs only
+      {
+        coverage: currentInput.coverage,
+        complexity: currentInput.complexity,
+        bugs: Math.max(Math.round(currentInput.bugs * 0.8), 0),
+      },
+      // Improve all three (balanced approach)
+      {
+        coverage: Math.min(currentInput.coverage + 10, 100),
+        complexity: Math.max(currentInput.complexity - 1, 1),
+        bugs: Math.max(Math.round(currentInput.bugs * 0.8), 0),
+      },
+      // Maximize coverage if low
+      {
+        coverage: currentInput.coverage < 70 ? Math.min(currentInput.coverage + 20, 100) : currentInput.coverage,
+        complexity: currentInput.complexity,
+        bugs: currentInput.bugs,
+      },
+    ]
+
+    // Find the scenario that produces the best score
+    scenarios.forEach(scenario => {
+      const result = predictQuality({
+        ...currentInput,
+        coverage: scenario.coverage,
+        complexity: scenario.complexity,
+        bugs: scenario.bugs,
+      })
+      if (result.score > bestScore) {
+        bestScore = result.score
+        bestSimulation = scenario
+      }
     })
+
+    setSimulation(bestSimulation)
     setTimeout(() => setIsAnimating(false), 300)
   }
 
