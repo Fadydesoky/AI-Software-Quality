@@ -142,9 +142,11 @@ function formatFixExample(recommendation: Recommendation): string {
 
   const parts: string[] = []
 
-  parts.push(`# ${recommendation.title}`)
+  if (recommendation.title) {
+    parts.push(`# ${recommendation.title}`)
+  }
   parts.push(`## Problem`)
-  parts.push(recommendation.evidence || recommendation.description)
+  parts.push(recommendation.evidence || recommendation.description || "Issue identified in code")
 
   if (recommendation.filePath) {
     parts.push(`\n### Location`)

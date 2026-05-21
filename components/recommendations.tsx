@@ -15,6 +15,12 @@ interface RecommendationsProps {
 }
 
 const priorityColors = {
+  critical: {
+    badge: "bg-red-700/20 text-red-700 dark:text-red-400 border-red-700/50",
+    icon: "text-red-700",
+    border: "border-l-red-700",
+    glow: "shadow-red-700/20",
+  },
   high: {
     badge: "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/30",
     icon: "text-red-500",

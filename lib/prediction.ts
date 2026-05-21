@@ -54,13 +54,13 @@ export interface RiskCategory {
 }
 
 export interface Recommendation {
-  id: string
+  id?: string
   priority: "critical" | "high" | "medium" | "low"
   metric: string
-  title: string
-  description: string
+  title?: string
+  description?: string
   action: string
-  evidence: string
+  evidence?: string
   impact: string
   targetValue: string
   filePath?: string
@@ -206,7 +206,7 @@ function generateRecommendations(
   }
 
   // Sort by priority
-  const priorityOrder = { high: 0, medium: 1, low: 2 }
+  const priorityOrder = { critical: 0, high: 1, medium: 2, low: 3 }
   return recommendations.sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority])
 }
 

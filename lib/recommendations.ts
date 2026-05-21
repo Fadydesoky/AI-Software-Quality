@@ -3,22 +3,8 @@
  * Generates specific, evidence-based recommendations mentioning exact metrics and file names
  */
 
-import type { PredictionInput, PredictionResult } from "./prediction"
+import type { PredictionInput, PredictionResult, Recommendation } from "./prediction"
 import type { FileAnalysisResult } from "./github-file-analyzer"
-
-export interface Recommendation {
-  id: string
-  title: string
-  description: string
-  priority: "critical" | "high" | "medium" | "low"
-  evidence: string // Why this recommendation applies
-  action: string // What to do
-  metrics?: {
-    current: number | string
-    target: number | string
-    unit: string
-  }
-}
 
 /**
  * Generate recommendations based on prediction results and file analysis
@@ -33,9 +19,13 @@ export function generateRecommendations(
   // Bug Density Recommendations
   if (result.metrics.bugDensity > 0.5) {
     const hotspotPath = fileAnalysis?.hotspots?.[0]?.path || "src/index.ts"
+    const targetBugs = Math.max(2, Math.floor(input.bugs / 2))
     recommendations.push({
       id: "bugs-high-density",
-      title: `Critical: ${input.bugs} Bugs Detected - Reduce to ${Math.max(2, Math.floor(input.bugs / 2))}`,
+      metric: "Bug Density",
+      impact: `Reduce bugs by ${input.bugs - targetBugs} to improve code reliability`,
+      targetValue: `${targetBugs} bugs`,
+      title: `Critical: ${input.bugs} Bugs Detected - Reduce to ${targetBugs}`,
       description: `Your project has ${input.bugs} bugs across ${input.commits} commits (${result.metrics.bugDensity.toFixed(2)} bugs/commit). This is above healthy thresholds and impacts reliability.`,
       priority: "critical",
       evidence: `Bug density of ${result.metrics.bugDensity.toFixed(2)} bugs/commit indicates potential issues in:
@@ -72,7 +62,7 @@ async function fetchData(url: string) {
       },
       metrics: {
         current: `${input.bugs} bugs`,
-        target: `${Math.max(2, Math.floor(input.bugs / 2))} bugs`,
+        target: `${targetBugs} bugs`,
         unit: "total bugs",
       },
     })
@@ -83,6 +73,9 @@ async function fetchData(url: string) {
     const uncoveredFiles = fileAnalysis?.hotspots?.slice(0, 3).map(h => `${h.path} (${h.complexity}/10 complexity)`).join("\n") || "critical modules"
     recommendations.push({
       id: "coverage-low",
+      metric: "Test Coverage",
+      impact: `Improve test coverage by ${70 - input.coverage}% to reduce bug escape rates`,
+      targetValue: "70%",
       title: `Low Test Coverage (${input.coverage}%) - Increase to 70%`,
       description: `Current test coverage is ${input.coverage}%, which is below industry best practices (70-80% target). This means ${100 - input.coverage}% of your code is untested.`,
       priority: "high",
@@ -160,6 +153,9 @@ describe('parseUserInput', () => {
     const complexFiles = fileAnalysis?.hotspots?.slice(0, 3).map(h => `${h.path} (${h.complexity}/10)`).join("\n") || "main functions"
     recommendations.push({
       id: "complexity-high",
+      metric: "Code Complexity",
+      impact: `Reduce complexity from ${input.complexity}/10 to 5/10 for better maintainability`,
+      targetValue: "5/10",
       title: `High Code Complexity (${input.complexity}/10) - Reduce to 5`,
       description: `Complexity score of ${input.complexity}/10 indicates overly complex codebase that's hard to maintain, test, and debug.`,
       priority: "high",
@@ -253,6 +249,9 @@ describe('processOrder', () => {
   if (result.metrics.productivity < 5) {
     recommendations.push({
       id: "productivity-low",
+      metric: "Team Productivity",
+      impact: "Improve development velocity and delivery speed",
+      targetValue: ">5 commits/dev",
       title: "Improve Team Productivity",
       description: `Team productivity is ${result.metrics.productivity.toFixed(1)} commits/developer, indicating potential bottlenecks.`,
       priority: "medium",
@@ -265,6 +264,9 @@ describe('processOrder', () => {
   if (fileAnalysis && fileAnalysis.hotspots.length > 5) {
     recommendations.push({
       id: "hotspots-too-many",
+      metric: "Code Hotspots",
+      impact: `Reduce complexity hotspots from ${fileAnalysis.hotspots.length} to <3`,
+      targetValue: "<3 hotspots",
       title: "Address Multiple Hotspots",
       description: `Detected ${fileAnalysis.hotspots.length} complexity hotspots across the codebase. This distributed risk requires systematic refactoring.`,
       priority: "high",
@@ -277,6 +279,9 @@ describe('processOrder', () => {
   if (result.risk === "High") {
     recommendations.push({
       id: "risk-high-overall",
+      metric: "Overall Risk",
+      impact: "Improve overall quality score from current level",
+      targetValue: ">75 score",
       title: "High Risk - Immediate Action Required",
       description: "Overall quality score is low, indicating multiple risk factors across the project.",
       priority: "critical",
@@ -294,6 +299,9 @@ describe('processOrder', () => {
   ) {
     recommendations.push({
       id: "best-practices-maintained",
+      metric: "Quality Standards",
+      impact: "Maintain excellent code quality standards",
+      targetValue: ">75 score",
       title: "Strong Quality Practices",
       description: "Your project maintains excellent quality standards across all metrics.",
       priority: "low",
