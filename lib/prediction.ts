@@ -54,11 +54,32 @@ export interface RiskCategory {
 }
 
 export interface Recommendation {
-  priority: "high" | "medium" | "low"
+  id?: string
+  priority: "critical" | "high" | "medium" | "low"
   metric: string
+  title?: string
+  description?: string
   action: string
+  evidence?: string
   impact: string
   targetValue: string
+  filePath?: string
+  lineNumbers?: {
+    start: number
+    end: number
+  }
+  codeSnippet?: string
+  fixExample?: {
+    language: string
+    before: string
+    after: string
+    explanation: string
+  }
+  metrics?: {
+    current: number | string
+    target: number | string
+    unit: string
+  }
 }
 
 export interface TrendAnalysis {
@@ -185,7 +206,7 @@ function generateRecommendations(
   }
 
   // Sort by priority
-  const priorityOrder = { high: 0, medium: 1, low: 2 }
+  const priorityOrder = { critical: 0, high: 1, medium: 2, low: 3 }
   return recommendations.sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority])
 }
 

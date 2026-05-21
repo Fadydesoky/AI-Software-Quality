@@ -6,8 +6,18 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { Download, Trash2, GitCompare, History, ArrowUpDown, Filter } from "lucide-react"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { Download, Trash2, GitCompare, History, ArrowUpDown, Filter, X } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { deleteHistoryEntry, clearHistory as clearHistoryStorage } from "@/lib/storage"
 import type { HistoryEntry } from "@/lib/prediction"
 
 type SortField = "timestamp" | "score" | "risk" | "bugs"
@@ -19,12 +29,16 @@ interface HistoryTableProps {
   onCompare: (ids: [string, string]) => void
   selectedIds: string[]
   onSelect: (id: string) => void
+  onDelete?: (id: string) => void
+  onDeleteSelected?: (ids: string[]) => void
 }
 
-export function HistoryTable({ history, onClear, onCompare, selectedIds, onSelect }: HistoryTableProps) {
+export function HistoryTable({ history, onClear, onCompare, selectedIds, onSelect, onDelete, onDeleteSelected }: HistoryTableProps) {
   const [sortField, setSortField] = React.useState<SortField>("timestamp")
   const [sortOrder, setSortOrder] = React.useState<SortOrder>("desc")
   const [filterRisk, setFilterRisk] = React.useState<"All" | "Low" | "Medium" | "High">("All")
+  const [clearDialogOpen, setClearDialogOpen] = React.useState(false)
+  const [deleteItemId, setDeleteItemId] = React.useState<string | null>(null)
   // Sorting and filtering logic
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -109,6 +123,27 @@ export function HistoryTable({ history, onClear, onCompare, selectedIds, onSelec
 
   const canCompare = selectedIds.length === 2
 
+  const handleDeleteItem = (id: string) => {
+    // Update localStorage first, then trigger parent state update
+    deleteHistoryEntry(id)
+    // Trigger parent component state update which will reload from localStorage
+    onDelete?.(id)
+  }
+
+  const handleDeleteSelected = () => {
+    // Update localStorage by deleting each item
+    selectedIds.forEach(id => deleteHistoryEntry(id))
+    // Trigger parent component state update
+    onDeleteSelected?.(selectedIds)
+  }
+
+  const handleClearAll = () => {
+    // Clear localStorage and let parent component clear state
+    clearHistoryStorage()
+    setClearDialogOpen(false)
+    onClear()
+  }
+
   if (history.length === 0) {
     return (
       <Card className="border-border/50 border-dashed">
@@ -139,25 +174,57 @@ export function HistoryTable({ history, onClear, onCompare, selectedIds, onSelec
           </div>
           <div className="flex items-center gap-2">
             {selectedIds.length > 0 && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => canCompare && onCompare(selectedIds as [string, string])}
-                disabled={!canCompare}
-                className="h-8 text-xs"
-              >
-                <GitCompare className="h-3.5 w-3.5 mr-1.5" />
-                Compare ({selectedIds.length}/2)
-              </Button>
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => canCompare && onCompare(selectedIds as [string, string])}
+                  disabled={!canCompare}
+                  className="h-8 text-xs"
+                >
+                  <GitCompare className="h-3.5 w-3.5 mr-1.5" />
+                  Compare ({selectedIds.length}/2)
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleDeleteSelected}
+                  className="h-8 text-xs text-muted-foreground hover:text-destructive"
+                >
+                  <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+                  Delete ({selectedIds.length})
+                </Button>
+              </>
             )}
             <Button variant="outline" size="sm" onClick={exportCSV} className="h-8 text-xs">
               <Download className="h-3.5 w-3.5 mr-1.5" />
               Export
             </Button>
-            <Button variant="outline" size="sm" onClick={onClear} className="h-8 text-xs text-muted-foreground hover:text-destructive">
-              <Trash2 className="h-3.5 w-3.5 mr-1.5" />
-              Clear
-            </Button>
+            <Dialog open={clearDialogOpen} onOpenChange={setClearDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm" className="h-8 text-xs text-muted-foreground hover:text-destructive">
+                  <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+                  Clear All
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Clear All History?</DialogTitle>
+                  <DialogDescription>
+                    This action will permanently delete all {history.length} saved analysis
+                    {history.length !== 1 ? "es" : ""}. This cannot be undone.
+                  </DialogDescription>
+                </DialogHeader>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setClearDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button variant="destructive" onClick={handleClearAll}>
+                    Clear All
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
 
@@ -184,7 +251,7 @@ export function HistoryTable({ history, onClear, onCompare, selectedIds, onSelec
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/30 hover:bg-muted/30">
-                <TableHead className="w-10"></TableHead>
+                <TableHead className="w-12"></TableHead>
                 <TableHead className="text-xs font-medium cursor-pointer hover:text-foreground">
                   <SortableHeader field="timestamp" label="Time" />
                 </TableHead>
@@ -201,6 +268,7 @@ export function HistoryTable({ history, onClear, onCompare, selectedIds, onSelec
                 <TableHead className="text-xs font-medium text-right cursor-pointer hover:text-foreground">
                   <SortableHeader field="score" label="Score" />
                 </TableHead>
+                <TableHead className="w-10"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -208,19 +276,19 @@ export function HistoryTable({ history, onClear, onCompare, selectedIds, onSelec
                 <TableRow 
                   key={entry.id} 
                   className={cn(
-                    "cursor-pointer transition-colors",
+                    "transition-colors",
                     selectedIds.includes(entry.id) && "bg-muted/50"
                   )}
-                  onClick={() => onSelect(entry.id)}
                 >
                   <TableCell className="py-3">
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.includes(entry.id)}
-                      onChange={() => onSelect(entry.id)}
-                      className="h-4 w-4 rounded border-border accent-primary"
-                      onClick={(e) => e.stopPropagation()}
-                    />
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(entry.id)}
+                        onChange={() => onSelect(entry.id)}
+                        className="h-4 w-4 rounded border-border accent-primary cursor-pointer"
+                      />
+                    </div>
                   </TableCell>
                   <TableCell className="py-3 whitespace-nowrap text-xs text-muted-foreground">
                     {new Date(entry.timestamp).toLocaleString(undefined, {
@@ -248,6 +316,17 @@ export function HistoryTable({ history, onClear, onCompare, selectedIds, onSelec
                     </Badge>
                   </TableCell>
                   <TableCell className="py-3 text-right text-xs tabular-nums font-semibold">{entry.score}</TableCell>
+                  <TableCell className="py-3 text-right">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                      onClick={() => handleDeleteItem(entry.id)}
+                      title="Delete this entry"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
