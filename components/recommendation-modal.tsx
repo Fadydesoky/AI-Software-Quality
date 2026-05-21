@@ -51,26 +51,15 @@ export function RecommendationModal({
   onOpenChange,
   repoUrl,
 }: RecommendationModalProps) {
+  // All hooks must be called unconditionally, before any early returns
   const [showFileViewer, setShowFileViewer] = React.useState(false)
   const [defaultBranch, setDefaultBranch] = React.useState("main")
   const [owner, setOwner] = React.useState("")
   const [repo, setRepo] = React.useState("")
 
-  if (!recommendation) {
-    return null
-  }
-
-  const colors = priorityColors[recommendation.priority]
-
-  // Extract filename from targetValue - it should contain actual file path
-  // Only generate link if targetValue appears to be a valid file path (contains / or .ext)
-  const filename = recommendation.targetValue?.match(/^\S+\.\w+$|^[^<>\s]+\/[^<>\s]+/) 
-    ? recommendation.targetValue 
-    : null
-
   // Parse repository information and fetch default branch
   React.useEffect(() => {
-    if (!repoUrl) return
+    if (!repoUrl || !open) return
 
     // Parse repo URL: https://github.com/owner/repo or owner/repo
     let parsedOwner = ""
@@ -106,6 +95,18 @@ export function RecommendationModal({
         })
     }
   }, [repoUrl, open])
+
+  if (!recommendation) {
+    return null
+  }
+
+  const colors = priorityColors[recommendation.priority]
+
+  // Extract filename from targetValue - it should contain actual file path
+  // Only generate link if targetValue appears to be a valid file path (contains / or .ext)
+  const filename = recommendation.targetValue?.match(/^\S+\.\w+$|^[^<>\s]+\/[^<>\s]+/) 
+    ? recommendation.targetValue 
+    : null
 
   // Build GitHub URL for direct file viewing
   const getGitHubLink = () => {
