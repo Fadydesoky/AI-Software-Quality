@@ -5,9 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Download, Trash2, GitCompare, History } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Download, Trash2, GitCompare, History, ArrowUpDown, Filter } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { HistoryEntry } from "@/lib/prediction"
+
+type SortField = "timestamp" | "score" | "risk" | "bugs"
+type SortOrder = "asc" | "desc"
 
 interface HistoryTableProps {
   history: HistoryEntry[]
@@ -18,9 +22,71 @@ interface HistoryTableProps {
 }
 
 export function HistoryTable({ history, onClear, onCompare, selectedIds, onSelect }: HistoryTableProps) {
+  const [sortField, setSortField] = React.useState<SortField>("timestamp")
+  const [sortOrder, setSortOrder] = React.useState<SortOrder>("desc")
+  const [filterRisk, setFilterRisk] = React.useState<"All" | "Low" | "Medium" | "High">("All")
+  // Sorting and filtering logic
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc")
+    } else {
+      setSortField(field)
+      setSortOrder("desc")
+    }
+  }
+
+  const sortedAndFilteredHistory = React.useMemo(() => {
+    let filtered = history.filter(entry => 
+      filterRisk === "All" || entry.risk === filterRisk
+    )
+
+    return filtered.sort((a, b) => {
+      let aVal: number, bVal: number
+
+      switch (sortField) {
+        case "timestamp":
+          aVal = a.timestamp
+          bVal = b.timestamp
+          break
+        case "score":
+          aVal = a.score
+          bVal = b.score
+          break
+        case "risk":
+          const riskOrder = { "Low": 1, "Medium": 2, "High": 3 }
+          aVal = riskOrder[a.risk]
+          bVal = riskOrder[b.risk]
+          break
+        case "bugs":
+          aVal = a.bugs
+          bVal = b.bugs
+          break
+        default:
+          return 0
+      }
+
+      return sortOrder === "asc" ? aVal - bVal : bVal - aVal
+    })
+  }, [history, sortField, sortOrder, filterRisk])
+
+  const SortableHeader = ({ field, label }: { field: SortField; label: string }) => (
+    <button
+      onClick={() => handleSort(field)}
+      className="flex items-center gap-1.5 hover:text-foreground transition-colors group"
+      title={`Sort by ${label}`}
+    >
+      <span>{label}</span>
+      <ArrowUpDown className={cn(
+        "h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity",
+        sortField === field && "opacity-100",
+        sortField === field && sortOrder === "asc" && "rotate-180"
+      )} />
+    </button>
+  )
+
   const exportCSV = () => {
     const headers = ["Timestamp", "Commits", "Bugs", "Complexity", "Developers", "Coverage", "Risk", "Score"]
-    const rows = history.map(entry => [
+    const rows = sortedAndFilteredHistory.map(entry => [
       new Date(entry.timestamp).toISOString(),
       entry.commits,
       entry.bugs,
@@ -63,34 +129,54 @@ export function HistoryTable({ history, onClear, onCompare, selectedIds, onSelec
 
   return (
     <Card className="border-border/50">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-        <div>
-          <CardTitle className="text-base font-semibold">Prediction History</CardTitle>
-          <p className="mt-1 text-xs text-muted-foreground">
-            {history.length} prediction{history.length !== 1 ? "s" : ""} recorded
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {selectedIds.length > 0 && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => canCompare && onCompare(selectedIds as [string, string])}
-              disabled={!canCompare}
-              className="h-8 text-xs"
-            >
-              <GitCompare className="h-3.5 w-3.5 mr-1.5" />
-              Compare ({selectedIds.length}/2)
+      <CardHeader className="space-y-4 pb-4">
+        <div className="flex flex-row items-center justify-between space-y-0">
+          <div>
+            <CardTitle className="text-base font-semibold">Prediction History</CardTitle>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {sortedAndFilteredHistory.length} of {history.length} prediction{history.length !== 1 ? "s" : ""} shown
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            {selectedIds.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => canCompare && onCompare(selectedIds as [string, string])}
+                disabled={!canCompare}
+                className="h-8 text-xs"
+              >
+                <GitCompare className="h-3.5 w-3.5 mr-1.5" />
+                Compare ({selectedIds.length}/2)
+              </Button>
+            )}
+            <Button variant="outline" size="sm" onClick={exportCSV} className="h-8 text-xs">
+              <Download className="h-3.5 w-3.5 mr-1.5" />
+              Export
             </Button>
-          )}
-          <Button variant="outline" size="sm" onClick={exportCSV} className="h-8 text-xs">
-            <Download className="h-3.5 w-3.5 mr-1.5" />
-            Export
-          </Button>
-          <Button variant="outline" size="sm" onClick={onClear} className="h-8 text-xs text-muted-foreground hover:text-destructive">
-            <Trash2 className="h-3.5 w-3.5 mr-1.5" />
-            Clear
-          </Button>
+            <Button variant="outline" size="sm" onClick={onClear} className="h-8 text-xs text-muted-foreground hover:text-destructive">
+              <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+              Clear
+            </Button>
+          </div>
+        </div>
+
+        {/* Risk Filter */}
+        <div className="flex items-center gap-2">
+          <Filter className="h-4 w-4 text-muted-foreground" />
+          <div className="flex gap-2">
+            {(["All", "Low", "Medium", "High"] as const).map(risk => (
+              <Button
+                key={risk}
+                variant={filterRisk === risk ? "default" : "outline"}
+                size="sm"
+                onClick={() => setFilterRisk(risk)}
+                className="h-7 text-xs"
+              >
+                {risk}
+              </Button>
+            ))}
+          </div>
         </div>
       </CardHeader>
       <CardContent className="pt-0">
@@ -99,18 +185,26 @@ export function HistoryTable({ history, onClear, onCompare, selectedIds, onSelec
             <TableHeader>
               <TableRow className="bg-muted/30 hover:bg-muted/30">
                 <TableHead className="w-10"></TableHead>
-                <TableHead className="text-xs font-medium">Time</TableHead>
+                <TableHead className="text-xs font-medium cursor-pointer hover:text-foreground">
+                  <SortableHeader field="timestamp" label="Time" />
+                </TableHead>
                 <TableHead className="text-xs font-medium text-right">Commits</TableHead>
-                <TableHead className="text-xs font-medium text-right">Bugs</TableHead>
+                <TableHead className="text-xs font-medium text-right cursor-pointer hover:text-foreground">
+                  <SortableHeader field="bugs" label="Bugs" />
+                </TableHead>
                 <TableHead className="text-xs font-medium text-right">Complexity</TableHead>
                 <TableHead className="text-xs font-medium text-right">Devs</TableHead>
                 <TableHead className="text-xs font-medium text-right">Coverage</TableHead>
-                <TableHead className="text-xs font-medium">Risk</TableHead>
-                <TableHead className="text-xs font-medium text-right">Score</TableHead>
+                <TableHead className="text-xs font-medium cursor-pointer hover:text-foreground">
+                  <SortableHeader field="risk" label="Risk" />
+                </TableHead>
+                <TableHead className="text-xs font-medium text-right cursor-pointer hover:text-foreground">
+                  <SortableHeader field="score" label="Score" />
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {history.map((entry) => (
+              {sortedAndFilteredHistory.map((entry) => (
                 <TableRow 
                   key={entry.id} 
                   className={cn(

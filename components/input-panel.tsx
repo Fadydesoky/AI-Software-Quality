@@ -15,6 +15,7 @@ import {
 import { Info, AlertCircle, CheckCircle2, Loader2, GitBranch } from "lucide-react"
 import { isValidGitHubUrl, parseGitHubUrl, type GitHubRepoData } from "@/lib/github"
 import type { PredictionInput } from "@/lib/prediction"
+import type { FileAnalysisResult } from "@/lib/github-file-analyzer"
 import { DataSourceIndicator } from "@/components/data-source-indicator"
 
 interface InputPanelProps {
@@ -24,11 +25,13 @@ interface InputPanelProps {
   isLoading?: boolean
   disabled?: boolean
   onRepoUrlChange?: (repoUrl: string | undefined) => void
+  onFileAnalysis?: (analysis: FileAnalysisResult) => void
 }
 
 interface GitHubFetchState {
   repoUrl: string
   data: GitHubRepoData | null
+  fileAnalysis: FileAnalysisResult | null
   error: string | null
   loading: boolean
   timestamp: number | null
@@ -54,11 +57,13 @@ export function InputPanel({
   isLoading,
   disabled,
   onRepoUrlChange,
+  onFileAnalysis,
 }: InputPanelProps) {
   const [githubUrl, setGithubUrl] = React.useState("")
   const [githubFetch, setGithubFetch] = React.useState<GitHubFetchState>({
     repoUrl: "",
     data: null,
+    fileAnalysis: null,
     error: null,
     loading: false,
     timestamp: null,
@@ -113,23 +118,50 @@ export function InputPanel({
       const result = await response.json()
 
       if (result.success && result.data) {
-        const { commits, contributorsCount, openIssues, closedIssues } = result.data
+        const { commits, contributorsCount, openIssues, closedIssues, fileAnalysis } = result.data
 
         // Calculate metrics from GitHub data
+        // Estimate complexity and coverage from file analysis
+        let estimatedComplexity = values.complexity
+        let estimatedCoverage = values.coverage
+        
+        if (fileAnalysis) {
+          // Map average complexity (0-30 scale) to 1-10 scale
+          estimatedComplexity = Math.round((fileAnalysis.averageComplexity / 30) * 10)
+          estimatedComplexity = Math.max(1, Math.min(10, estimatedComplexity))
+          
+          // Risk level suggests coverage (High = 20%, Medium = 50%, Low = 80%)
+          // Higher risk = lower coverage expected
+          if (fileAnalysis.riskLevel === "High") {
+            estimatedCoverage = 20
+          } else if (fileAnalysis.riskLevel === "Medium") {
+            estimatedCoverage = 50
+          } else {
+            estimatedCoverage = 80
+          }
+        }
+        
         const updatedValues: PredictionInput = {
           ...values,
           commits: Math.max(commits, 1),
           bugs: openIssues + closedIssues,
           developers: Math.max(contributorsCount, 1),
-          // Complexity and coverage remain as manual input (unavailable from GitHub API)
+          complexity: estimatedComplexity,
+          coverage: estimatedCoverage,
         }
 
         onChange(updatedValues)
+
+        // Pass file analysis data to parent component
+        if (fileAnalysis) {
+          onFileAnalysis?.(fileAnalysis)
+        }
 
         const fullRepoUrl = `${parsed.owner}/${parsed.repo}`
         setGithubFetch({
           repoUrl: fullRepoUrl,
           data: result.data,
+          fileAnalysis: fileAnalysis || null,
           error: null,
           loading: false,
           timestamp: Date.now(),
@@ -234,7 +266,7 @@ export function InputPanel({
           <div className="grid gap-5 sm:grid-cols-3">
             <div className="space-y-2">
               <div className="flex items-center gap-1.5">
-                <Label className="text-sm font-medium">Commits</Label>
+                <Label htmlFor="commits" className="text-sm font-medium">Commits</Label>
                 <Tooltip>
                   <TooltipTrigger>
                     <Info className="h-3.5 w-3.5 text-muted-foreground/60 cursor-help" />
@@ -246,6 +278,7 @@ export function InputPanel({
               </div>
 
               <Input
+                id="commits"
                 type="number"
                 min={1}
                 max={10000}
@@ -256,7 +289,7 @@ export function InputPanel({
 
             <div className="space-y-2">
               <div className="flex items-center gap-1.5">
-                <Label className="text-sm font-medium">Bugs</Label>
+                <Label htmlFor="bugs" className="text-sm font-medium">Bugs</Label>
                 <Tooltip>
                   <TooltipTrigger>
                     <Info className="h-3.5 w-3.5 text-muted-foreground/60 cursor-help" />
@@ -268,6 +301,7 @@ export function InputPanel({
               </div>
 
               <Input
+                id="bugs"
                 type="number"
                 min={0}
                 max={1000}
@@ -278,7 +312,7 @@ export function InputPanel({
 
             <div className="space-y-2">
               <div className="flex items-center gap-1.5">
-                <Label className="text-sm font-medium">Developers</Label>
+                <Label htmlFor="developers" className="text-sm font-medium">Developers</Label>
                 <Tooltip>
                   <TooltipTrigger>
                     <Info className="h-3.5 w-3.5 text-muted-foreground/60 cursor-help" />
@@ -290,6 +324,7 @@ export function InputPanel({
               </div>
 
               <Input
+                id="developers"
                 type="number"
                 min={1}
                 max={100}
@@ -304,7 +339,7 @@ export function InputPanel({
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5">
-                <Label className="text-sm font-medium">Complexity</Label>
+                <Label htmlFor="complexity" className="text-sm font-medium">Complexity</Label>
                 <Tooltip>
                   <TooltipTrigger>
                     <Info className="h-3.5 w-3.5 text-muted-foreground/60 cursor-help" />
@@ -320,18 +355,20 @@ export function InputPanel({
             </div>
 
             <Slider
+              id="complexity"
               value={[values.complexity]}
               onValueChange={handleSliderChange("complexity")}
               min={1}
               max={10}
               step={1}
+              aria-label="Complexity level"
             />
           </div>
 
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5">
-                <Label className="text-sm font-medium">Test Coverage</Label>
+                <Label htmlFor="coverage" className="text-sm font-medium">Test Coverage</Label>
                 <Tooltip>
                   <TooltipTrigger>
                     <Info className="h-3.5 w-3.5 text-muted-foreground/60 cursor-help" />
@@ -347,11 +384,13 @@ export function InputPanel({
             </div>
 
             <Slider
+              id="coverage"
               value={[values.coverage]}
               onValueChange={handleSliderChange("coverage")}
               min={0}
               max={100}
               step={1}
+              aria-label="Test coverage percentage"
             />
           </div>
 

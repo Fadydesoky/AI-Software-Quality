@@ -120,6 +120,13 @@ export function Recommendations({ recommendations, isAdvancedMode = false }: Rec
                   </div>
                   <p className="text-sm font-medium">{rec.action}</p>
                   
+                  {/* Show additional context for file-based recommendations */}
+                  {rec.metric === "Complexity Hotspot" && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {rec.targetValue}
+                    </p>
+                  )}
+                  
                   {/* Always show impact details with numbers */}
                   <div className="flex items-center gap-4 text-xs">
                     <div className={cn(

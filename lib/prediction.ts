@@ -348,7 +348,7 @@ export function validateInputs(input: PredictionInput): InputValidation[] {
   return validations
 }
 
-export function predictQuality(input: PredictionInput): PredictionResult {
+export function predictQuality(input: PredictionInput, fileAnalysis?: any): PredictionResult {
   const { commits, bugs, complexity, developers, coverage } = input
 
   // Prevent division by zero
@@ -359,10 +359,16 @@ export function predictQuality(input: PredictionInput): PredictionResult {
   const bugDensity = bugs / safeCommits
   const productivity = safeCommits / safeDevelopers
 
-  // Calculate score components with detailed breakdown
-  const bugDensityContribution = (1 - Math.min(bugDensity, 1)) * 40
-  const complexityContribution = (10 - complexity) * 3
-  const coverageContribution = coverage * 0.33
+  // Calculate score components with enhanced weighting
+  // Bug Density: 0-40 points (lower is better, exponential penalty)
+  const bugDensityNormalized = Math.min(bugDensity / THRESHOLDS.bugDensity.warning, 2) // 0-2 scale
+  const bugDensityContribution = (1 - Math.min(bugDensityNormalized, 1)) * 40
+
+  // Complexity: 0-30 points (lower is better, linear)
+  const complexityContribution = Math.max(0, (10 - complexity) * 3)
+
+  // Coverage: 0-30 points (higher is better)
+  const coverageContribution = (coverage / 100) * 30
 
   // Determine status for each metric
   const getBugDensityStatus = (): "good" | "warning" | "bad" => {
@@ -449,8 +455,20 @@ export function predictQuality(input: PredictionInput): PredictionResult {
   // Calculate risk categories
   const riskCategories = calculateRiskCategories(input, bugDensity, breakdown)
 
-  // Generate recommendations
-  const recommendations = generateRecommendations(input, bugDensity, score)
+  // Generate recommendations (using file-level data if available)
+  let recommendations = generateRecommendations(input, bugDensity, score)
+  
+  // Add file-specific hotspot recommendations if file analysis available
+  if (fileAnalysis && fileAnalysis.hotspots && fileAnalysis.hotspots.length > 0) {
+    const topHotspot = fileAnalysis.hotspots[0]
+    recommendations.unshift({
+      priority: topHotspot.riskScore > 80 ? "high" : "medium",
+      metric: "Complexity Hotspot",
+      action: `Refactor ${topHotspot.path.split('/').pop()} (complexity: ${topHotspot.complexity})`,
+      impact: `Address top risk file (score: ${topHotspot.riskScore})`,
+      targetValue: `Reduce complexity to < 15`,
+    })
+  }
 
   // Store formulas for display
   const formulas = {

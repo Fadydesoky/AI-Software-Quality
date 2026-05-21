@@ -100,7 +100,7 @@ export function TrendSimulation({ currentInput }: TrendSimulationProps) {
             <span className="text-sm text-muted-foreground">
               {metric === "coverage" ? "Test Coverage" : "Complexity"}
             </span>
-            <span className="text-sm font-semibold tabular-nums">
+            <span className="text-sm font-semibold tabular-nums" aria-live="polite" aria-atomic="true">
               {metric === "coverage" ? `${simulatedValue}%` : `${simulatedValue}/10`}
             </span>
           </div>
@@ -110,6 +110,7 @@ export function TrendSimulation({ currentInput }: TrendSimulationProps) {
             min={metric === "coverage" ? 0 : 1}
             max={metric === "coverage" ? 100 : 10}
             step={metric === "coverage" ? 5 : 1}
+            aria-label={metric === "coverage" ? "Simulated test coverage" : "Simulated complexity"}
           />
           <div className="flex justify-between text-[10px] text-muted-foreground">
             <span>{metric === "coverage" ? "0%" : "1 (Simple)"}</span>

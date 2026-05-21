@@ -4,7 +4,8 @@ import * as React from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts"
-import { X } from "lucide-react"
+import { X, TrendingUp, TrendingDown, Minus } from "lucide-react"
+import { cn } from "@/lib/utils"
 import type { HistoryEntry } from "@/lib/prediction"
 
 interface ComparisonChartProps {
@@ -102,6 +103,48 @@ export function ComparisonChart({ entries, onClose }: ComparisonChartProps) {
             <p className="mt-2 text-xs text-muted-foreground">
               Risk: <span className="font-semibold text-foreground">{entryB.risk}</span> | Score: <span className="font-semibold text-foreground">{entryB.score}</span>
             </p>
+          </div>
+        </div>
+
+        {/* Delta Analysis */}
+        <div className="mt-6 space-y-3">
+          <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Impact Analysis (B vs A)</h4>
+          <div className="grid gap-2">
+            {[
+              { label: "Score", valueA: entryA.score, valueB: entryB.score, format: (v: number) => v.toString(), betterIsHigher: true },
+              { label: "Bugs", valueA: entryA.bugs, valueB: entryB.bugs, format: (v: number) => v.toString(), betterIsHigher: false },
+              { label: "Coverage", valueA: entryA.coverage, valueB: entryB.coverage, format: (v: number) => `${v}%`, betterIsHigher: true },
+              { label: "Complexity", valueA: entryA.complexity, valueB: entryB.complexity, format: (v: number) => `${v}/10`, betterIsHigher: false },
+            ].map(({ label, valueA, valueB, format, betterIsHigher }) => {
+              const delta = valueB - valueA
+              const deltaPercent = valueA !== 0 ? ((delta / valueA) * 100).toFixed(0) : 0
+              const isImprovement = betterIsHigher ? delta > 0 : delta < 0
+              const isDeteriorated = betterIsHigher ? delta < 0 : delta > 0
+
+              return (
+                <div key={label} className="flex items-center justify-between rounded-lg border border-border/50 bg-muted/20 px-3 py-2">
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground">{label}</p>
+                    <p className="mt-0.5 text-[10px] text-muted-foreground/60">
+                      {format(valueA)} → {format(valueB)}
+                    </p>
+                  </div>
+                  <div className={cn(
+                    "flex items-center gap-1 rounded-md px-2 py-1",
+                    isImprovement && "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+                    isDeteriorated && "bg-red-500/10 text-red-600 dark:text-red-400",
+                    delta === 0 && "bg-muted/50 text-muted-foreground"
+                  )}>
+                    {isImprovement && <TrendingUp className="h-3 w-3" />}
+                    {isDeteriorated && <TrendingDown className="h-3 w-3" />}
+                    {delta === 0 && <Minus className="h-3 w-3" />}
+                    <span className="text-xs font-semibold">
+                      {delta > 0 ? "+" : ""}{delta === 0 ? "No change" : `${deltaPercent}%`}
+                    </span>
+                  </div>
+                </div>
+              )
+            })}
           </div>
         </div>
       </CardContent>
