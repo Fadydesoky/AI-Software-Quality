@@ -130,13 +130,14 @@ export function InputPanel({
           estimatedComplexity = Math.round((fileAnalysis.averageComplexity / 30) * 10)
           estimatedComplexity = Math.max(1, Math.min(10, estimatedComplexity))
           
-          // Risk level suggests coverage (High = low coverage, Low = high coverage)
+          // Risk level suggests coverage (High = 20%, Medium = 50%, Low = 80%)
+          // Higher risk = lower coverage expected
           if (fileAnalysis.riskLevel === "High") {
-            estimatedCoverage = Math.max(20, values.coverage)
+            estimatedCoverage = 20
           } else if (fileAnalysis.riskLevel === "Medium") {
-            estimatedCoverage = Math.max(50, values.coverage)
+            estimatedCoverage = 50
           } else {
-            estimatedCoverage = Math.max(70, values.coverage)
+            estimatedCoverage = 80
           }
         }
         

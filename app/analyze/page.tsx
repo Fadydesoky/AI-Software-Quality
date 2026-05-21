@@ -81,12 +81,11 @@ function AnalyzeContent() {
 
   // Load initial data from localStorage on mount
   React.useEffect(() => {
-    const savedInput = loadCurrentInput()
     const savedHistory = loadHistory()
     
-    if (savedInput) {
-      setInputValues(savedInput)
-    }
+    // Load history from localStorage, but NOT input values
+    // Input values should come from URL params or defaults
+    // GitHub fetch will update them fresh via InputPanel callback
     if (savedHistory.length > 0) {
       setHistory(savedHistory)
     }
