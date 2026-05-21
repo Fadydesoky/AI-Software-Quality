@@ -18,7 +18,7 @@ interface AIInsightsPanelProps {
   }
 }
 
-// Generate human-readable AI insight based on the prediction
+// Generate evidence-backed AI insight following Evidence → Interpretation → Suggested Action
 function generateAIInsight(
   result: PredictionResult,
   inputValues: AIInsightsPanelProps["inputValues"]
@@ -35,7 +35,8 @@ function generateAIInsight(
       status: breakdown.bugDensity.status, 
       efficiency: Math.round((breakdown.bugDensity.contribution / breakdown.bugDensity.maxContribution) * 100),
       value: metrics.bugDensity.toFixed(2),
-      unit: "bugs/commit"
+      unit: "bugs/commit",
+      threshold: "0.3",
     },
     { 
       name: "code complexity", 
@@ -45,7 +46,8 @@ function generateAIInsight(
       status: breakdown.complexity.status, 
       efficiency: Math.round((breakdown.complexity.contribution / breakdown.complexity.maxContribution) * 100),
       value: inputValues.complexity.toString(),
-      unit: "/10"
+      unit: "/10",
+      threshold: "7",
     },
     { 
       name: "test coverage", 
@@ -55,7 +57,8 @@ function generateAIInsight(
       status: breakdown.coverage.status, 
       efficiency: Math.round((breakdown.coverage.contribution / breakdown.coverage.maxContribution) * 100),
       value: inputValues.coverage.toString(),
-      unit: "%"
+      unit: "%",
+      threshold: "70",
     },
   ]
   
@@ -75,41 +78,46 @@ function generateAIInsight(
   const sortedByImpact = [...factorsWithImpact].sort((a, b) => b.impactPercentage - a.impactPercentage)
   const primaryDriver = sortedByImpact[0]
   
-  // Build the analytical insight message
-  let insight = `Your system is at **${risk} risk** (**${score}/100**). `
+  // Build insight following Evidence → Interpretation → Suggested Action
+  let insight = ""
   
-  // Always mention the primary driver with impact percentage
-  insight += `The primary driver is **${primaryDriver.name}** (**${primaryDriver.impactPercentage}% impact**)`
+  // EVIDENCE SECTION
+  insight += `**EVIDENCE**\n`
+  insight += `Risk Level: **${risk}** (Score: **${score}/100**)\n`
+  insight += `Primary Driver: **${primaryDriver.displayName}** at **${primaryDriver.value}${primaryDriver.unit}** (threshold: ${primaryDriver.threshold}${primaryDriver.unit}) — **${primaryDriver.impactPercentage}% of total risk**\n`
   
-  // Mention strongest metric if it's different from weakest and performing well
-  if (strongestMetric.name !== weakestMetric.name && strongestMetric.status === "good") {
-    insight += `, while **${strongestMetric.name}** contributes positively at **${strongestMetric.efficiency}% efficiency**. `
-  } else if (strongestMetric.efficiency >= 70) {
-    insight += `, with **${strongestMetric.name}** as your strongest area (**${strongestMetric.efficiency}%** of max). `
-  } else {
-    insight += `. `
+  if (weakestMetric.status !== "good") {
+    insight += `Weakest Metric: **${weakestMetric.displayName}** at **${weakestMetric.value}${weakestMetric.unit}** (${weakestMetric.efficiency}% of max contribution)\n`
   }
   
-  // Actionable insight based on weakest metric
-  if (weakestMetric.status === "bad" || weakestMetric.status === "warning") {
-    // Calculate potential improvement
-    const currentPoints = weakestMetric.contribution
-    const maxPoints = weakestMetric.max
-    const potentialGain = Math.round(maxPoints - currentPoints)
-    
-    if (weakestMetric.name === "test coverage") {
-      const targetCoverage = Math.min(inputValues.coverage + 20, 90)
-      insight += `Improving coverage from **${inputValues.coverage}%** to **${targetCoverage}%** could add **+${Math.round(potentialGain * 0.6)}-${potentialGain} points**.`
-    } else if (weakestMetric.name === "bug density") {
-      const targetBugs = Math.max(Math.round(inputValues.bugs * 0.5), 1)
-      insight += `Reducing bugs from **${inputValues.bugs}** to **${targetBugs}** would have the highest impact, potentially adding **+${Math.round(potentialGain * 0.7)}-${potentialGain} points**.`
-    } else {
-      const targetComplexity = Math.max(inputValues.complexity - 2, 3)
-      insight += `Reducing complexity from **${inputValues.complexity}** to **${targetComplexity}** could improve your score by **+${Math.round(potentialGain * 0.5)}-${potentialGain} points**.`
-    }
-  } else {
-    // All metrics performing well
-    insight += `All metrics are operating efficiently. **${strongestMetric.displayName}** leads at **${strongestMetric.impactPercentage}% impact** (${strongestMetric.value}${strongestMetric.unit}), maintaining overall system health.`
+  if (strongestMetric.status === "good") {
+    insight += `Strongest Metric: **${strongestMetric.displayName}** at **${strongestMetric.efficiency}% efficiency** (performing well)\n`
+  }
+  
+  // INTERPRETATION SECTION
+  insight += `\n**INTERPRETATION**\n`
+  
+  if (primaryDriver.name === "bug density") {
+    insight += `Bug density of **${primaryDriver.value} bugs/commit** exceeds the **${primaryDriver.threshold} bugs/commit** threshold. This indicates high defect rates relative to development activity. High bug density increases production incidents, customer impact, and maintenance costs. It represents **${primaryDriver.impactPercentage}%** of your overall risk score.\n`
+  } else if (primaryDriver.name === "code complexity") {
+    insight += `Code complexity at **${primaryDriver.value}/10** exceeds the warning threshold of **${primaryDriver.threshold}/10**. Higher complexity makes code harder to understand, test, and maintain safely. Complex code has higher bug density and requires more testing effort. It represents **${primaryDriver.impactPercentage}%** of your overall risk score.\n`
+  } else if (primaryDriver.name === "test coverage") {
+    insight += `Test coverage at **${primaryDriver.value}%** is below the **${primaryDriver.threshold}%** industry benchmark. Low coverage means **${100 - parseInt(primaryDriver.value)}%** of code paths are untested, increasing bug escape rates to production. Untested code blocks become maintenance risks and regression vectors. It represents **${primaryDriver.impactPercentage}%** of your overall risk score.\n`
+  }
+  
+  // SUGGESTED ACTION SECTION
+  insight += `\n**SUGGESTED ACTION**\n`
+  
+  if (primaryDriver.name === "bug density") {
+    const targetBugs = Math.max(Math.round(inputValues.bugs * 0.5), 1)
+    const improvement = Math.round((1 - (targetBugs / inputValues.bugs)) * 100)
+    insight += `Reduce bug count from **${inputValues.bugs}** to **${targetBugs}** (${improvement}% reduction). Actions: (1) Add error handling to API calls and async operations; (2) Implement input validation for all user-facing functions; (3) Write tests for edge cases (null, empty, timeout scenarios); (4) Use type-safe patterns to catch bugs at compile time.`
+  } else if (primaryDriver.name === "code complexity") {
+    const targetComplexity = Math.max(inputValues.complexity - 2, 3)
+    insight += `Reduce complexity from **${inputValues.complexity}** to **${targetComplexity}** through refactoring. Actions: (1) Break large functions into smaller, focused units (max 50 LOC each); (2) Extract nested conditions into helper functions; (3) Simplify conditional logic using early returns; (4) Replace complex inheritance with composition.`
+  } else if (primaryDriver.name === "test coverage") {
+    const targetCoverage = Math.min(inputValues.coverage + 20, 90)
+    insight += `Increase test coverage from **${inputValues.coverage}%** to **${targetCoverage}%**. Actions: (1) Write unit tests for all public functions; (2) Add integration tests for critical workflows; (3) Test error paths and edge cases explicitly; (4) Set up CI/CD coverage gates (fail builds if coverage drops below ${targetCoverage}%).`
   }
   
   return insight
