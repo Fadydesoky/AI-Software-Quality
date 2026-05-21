@@ -56,9 +56,10 @@ export function RecommendationModal({
 
   const colors = priorityColors[recommendation.priority]
 
-  // Extract filename from metrics if it's a complexity hotspot
-  const filename = recommendation.metric?.includes("Complexity") 
-    ? recommendation.targetValue?.split("/")[0] 
+  // Extract filename from targetValue - it should contain actual file path
+  // Only generate link if targetValue appears to be a valid file path (contains / or .ext)
+  const filename = recommendation.targetValue?.match(/^\S+\.\w+$|^[^<>\s]+\/[^<>\s]+/) 
+    ? recommendation.targetValue 
     : null
 
   // Build GitHub URL for direct file viewing
@@ -81,8 +82,18 @@ export function RecommendationModal({
       repo = parts[1]
     }
 
-    if (owner && repo) {
-      return `https://github.com/${owner}/${repo}/blob/main/${filename}`
+    if (owner && repo && filename) {
+      // Sanitize the filename to remove any HTML entities or invalid characters
+      const cleanFilename = filename
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/[<>]/g, '')
+        .trim()
+      
+      // Only create link if filename is actually a file, not a metric value
+      if (cleanFilename && !cleanFilename.includes('reduce') && !cleanFilename.includes('increase')) {
+        return `https://github.com/${owner}/${repo}/blob/main/${cleanFilename}`
+      }
     }
     return null
   }

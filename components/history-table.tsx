@@ -124,16 +124,21 @@ export function HistoryTable({ history, onClear, onCompare, selectedIds, onSelec
   const canCompare = selectedIds.length === 2
 
   const handleDeleteItem = (id: string) => {
+    // Update localStorage first, then trigger parent state update
     deleteHistoryEntry(id)
+    // Trigger parent component state update which will reload from localStorage
     onDelete?.(id)
   }
 
   const handleDeleteSelected = () => {
+    // Update localStorage by deleting each item
     selectedIds.forEach(id => deleteHistoryEntry(id))
+    // Trigger parent component state update
     onDeleteSelected?.(selectedIds)
   }
 
   const handleClearAll = () => {
+    // Clear localStorage and let parent component clear state
     clearHistoryStorage()
     setClearDialogOpen(false)
     onClear()

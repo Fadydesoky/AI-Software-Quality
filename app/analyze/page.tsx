@@ -102,10 +102,12 @@ function AnalyzeContent() {
 
   // Save history entries to localStorage when history changes
   React.useEffect(() => {
-    if (isHydrated && history.length > 0) {
-      // Only save new entries (those not yet in storage)
-      const lastEntry = history[history.length - 1]
-      saveHistoryEntry(lastEntry)
+    if (isHydrated) {
+      // Sync entire history to localStorage to handle deletions properly
+      if (history.length > 0) {
+        localStorage.setItem('qualioro:history', JSON.stringify(history))
+        localStorage.setItem('qualioro:lastSaved', new Date().toISOString())
+      }
     }
   }, [history, isHydrated])
 
@@ -176,7 +178,10 @@ function AnalyzeContent() {
   }
 
   const handleDeleteItem = (id: string) => {
-    setHistory(prev => prev.filter(h => h.id !== id))
+    // Reload history from localStorage after deletion
+    // (deleteHistoryEntry in the table component already updated localStorage)
+    const updated = loadHistory()
+    setHistory(updated)
     setSelectedIds(prev => prev.filter(sid => sid !== id))
     if (comparisonEntries) {
       if (comparisonEntries[0].id === id || comparisonEntries[1].id === id) {
@@ -186,7 +191,9 @@ function AnalyzeContent() {
   }
 
   const handleDeleteSelected = (ids: string[]) => {
-    setHistory(prev => prev.filter(h => !ids.includes(h.id)))
+    // Reload history from localStorage after deletion
+    const updated = loadHistory()
+    setHistory(updated)
     setSelectedIds([])
     setComparisonEntries(null)
   }
