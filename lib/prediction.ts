@@ -359,10 +359,16 @@ export function predictQuality(input: PredictionInput): PredictionResult {
   const bugDensity = bugs / safeCommits
   const productivity = safeCommits / safeDevelopers
 
-  // Calculate score components with detailed breakdown
-  const bugDensityContribution = (1 - Math.min(bugDensity, 1)) * 40
-  const complexityContribution = (10 - complexity) * 3
-  const coverageContribution = coverage * 0.33
+  // Calculate score components with enhanced weighting
+  // Bug Density: 0-40 points (lower is better, exponential penalty)
+  const bugDensityNormalized = Math.min(bugDensity / THRESHOLDS.bugDensity.warning, 2) // 0-2 scale
+  const bugDensityContribution = (1 - Math.min(bugDensityNormalized, 1)) * 40
+
+  // Complexity: 0-30 points (lower is better, linear)
+  const complexityContribution = Math.max(0, (10 - complexity) * 3)
+
+  // Coverage: 0-30 points (higher is better)
+  const coverageContribution = (coverage / 100) * 30
 
   // Determine status for each metric
   const getBugDensityStatus = (): "good" | "warning" | "bad" => {

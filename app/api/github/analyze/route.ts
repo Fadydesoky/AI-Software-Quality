@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getGitHubRepoApiUrl, type GitHubRepoData, type GitHubAnalyzeError } from '@/lib/github'
+import { analyzeGitHubFiles, type FileAnalysisResult } from '@/lib/github-file-analyzer'
 
 interface GitHubApiResponse {
   success: boolean
-  data?: GitHubRepoData
+  data?: GitHubRepoData & { fileAnalysis?: FileAnalysisResult }
   error?: GitHubAnalyzeError
 }
 
@@ -136,6 +137,40 @@ async function getRepoInfo(owner: string, repo: string): Promise<{ language: str
   }
 }
 
+// Fetch repository tree to analyze file structure and complexity
+async function getRepositoryTree(owner: string, repo: string, mainBranch: string, maxDepth: number = 3): Promise<Array<{ path: string; size: number; type: string }>> {
+  const url = `${getGitHubRepoApiUrl(owner, repo)}/git/trees/${mainBranch}?recursive=1`
+  const response = await fetch(url, {
+    headers: {
+      Accept: 'application/vnd.github.v3+json',
+    },
+  })
+
+  if (!response.ok) {
+    console.warn('[v0] Failed to fetch repository tree')
+    return []
+  }
+
+  const data = await response.json()
+  const tree = data.tree || []
+
+  // Filter to code files only and limit depth
+  const codeFiles = tree
+    .filter((item: any) => {
+      const path = item.path || ''
+      const isCodeFile = /\.(js|ts|jsx|tsx|py|go|rs|java|cpp|c|rb|php|swift|kt|scala|sh)$/i.test(path)
+      const depth = path.split('/').length
+      return isCodeFile && depth <= maxDepth && item.type === 'blob'
+    })
+    .map((item: any) => ({
+      path: item.path,
+      size: item.size || 0,
+      type: item.type,
+    }))
+
+  return codeFiles.slice(0, 200) // Limit to top 200 files for performance
+}
+
 export async function POST(request: NextRequest): Promise<NextResponse<GitHubApiResponse>> {
   try {
     const body = await request.json()
@@ -164,7 +199,25 @@ export async function POST(request: NextRequest): Promise<NextResponse<GitHubApi
       throw error
     })
 
-    const data: GitHubRepoData = {
+    // Fetch file tree for analysis
+    let fileAnalysis: FileAnalysisResult | undefined
+    try {
+      const fileTree = await getRepositoryTree(owner, repo, repoInfo.mainBranch)
+      if (fileTree.length > 0) {
+        // Convert to format expected by analyzeGitHubFiles
+        const filesForAnalysis = fileTree.map(f => ({
+          path: f.path,
+          name: f.path.split('/').pop() || f.path,
+          size: f.size,
+          type: f.type,
+        }))
+        fileAnalysis = analyzeGitHubFiles(filesForAnalysis)
+      }
+    } catch (error) {
+      console.warn('[v0] File analysis failed, continuing without it:', error)
+    }
+
+    const data: GitHubRepoData & { fileAnalysis?: FileAnalysisResult } = {
       commits: Math.max(commits, 1),
       contributorsCount: Math.max(contributors, 1),
       openIssues: issues.open,
@@ -172,6 +225,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<GitHubApi
       language: repoInfo.language,
       stars: repoInfo.stars,
       mainBranch: repoInfo.mainBranch,
+      fileAnalysis,
     }
 
     return NextResponse.json({

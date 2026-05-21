@@ -15,6 +15,7 @@ import {
 import { Info, AlertCircle, CheckCircle2, Loader2, GitBranch } from "lucide-react"
 import { isValidGitHubUrl, parseGitHubUrl, type GitHubRepoData } from "@/lib/github"
 import type { PredictionInput } from "@/lib/prediction"
+import type { FileAnalysisResult } from "@/lib/github-file-analyzer"
 import { DataSourceIndicator } from "@/components/data-source-indicator"
 
 interface InputPanelProps {
@@ -24,11 +25,13 @@ interface InputPanelProps {
   isLoading?: boolean
   disabled?: boolean
   onRepoUrlChange?: (repoUrl: string | undefined) => void
+  onFileAnalysis?: (analysis: FileAnalysisResult) => void
 }
 
 interface GitHubFetchState {
   repoUrl: string
   data: GitHubRepoData | null
+  fileAnalysis: FileAnalysisResult | null
   error: string | null
   loading: boolean
   timestamp: number | null
@@ -54,11 +57,13 @@ export function InputPanel({
   isLoading,
   disabled,
   onRepoUrlChange,
+  onFileAnalysis,
 }: InputPanelProps) {
   const [githubUrl, setGithubUrl] = React.useState("")
   const [githubFetch, setGithubFetch] = React.useState<GitHubFetchState>({
     repoUrl: "",
     data: null,
+    fileAnalysis: null,
     error: null,
     loading: false,
     timestamp: null,
@@ -113,7 +118,7 @@ export function InputPanel({
       const result = await response.json()
 
       if (result.success && result.data) {
-        const { commits, contributorsCount, openIssues, closedIssues } = result.data
+        const { commits, contributorsCount, openIssues, closedIssues, fileAnalysis } = result.data
 
         // Calculate metrics from GitHub data
         const updatedValues: PredictionInput = {
@@ -126,10 +131,16 @@ export function InputPanel({
 
         onChange(updatedValues)
 
+        // Pass file analysis data to parent component
+        if (fileAnalysis) {
+          onFileAnalysis?.(fileAnalysis)
+        }
+
         const fullRepoUrl = `${parsed.owner}/${parsed.repo}`
         setGithubFetch({
           repoUrl: fullRepoUrl,
           data: result.data,
+          fileAnalysis: fileAnalysis || null,
           error: null,
           loading: false,
           timestamp: Date.now(),

@@ -261,6 +261,7 @@ function AnalyzeContent() {
                 isLoading={isLoading}
                 disabled={hasErrors}
                 onRepoUrlChange={setCurrentRepoUrl}
+                onFileAnalysis={setFileAnalysis}
               />
             </div>
 
