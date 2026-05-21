@@ -10,7 +10,8 @@ import {
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { ExternalLink, AlertCircle, CheckCircle2, TrendingUp, Target } from "lucide-react"
+import { ExternalLink, AlertCircle, CheckCircle2, TrendingUp, Target, Code2 } from "lucide-react"
+import { FileViewer } from "@/components/file-viewer"
 import { cn } from "@/lib/utils"
 import type { Recommendation } from "@/lib/prediction"
 
@@ -50,6 +51,11 @@ export function RecommendationModal({
   onOpenChange,
   repoUrl,
 }: RecommendationModalProps) {
+  const [showFileViewer, setShowFileViewer] = React.useState(false)
+  const [defaultBranch, setDefaultBranch] = React.useState("main")
+  const [owner, setOwner] = React.useState("")
+  const [repo, setRepo] = React.useState("")
+
   if (!recommendation) {
     return null
   }
@@ -62,38 +68,58 @@ export function RecommendationModal({
     ? recommendation.targetValue 
     : null
 
-  // Build GitHub URL for direct file viewing
-  const getGitHubLink = () => {
-    if (!repoUrl || !filename) return null
+  // Parse repository information and fetch default branch
+  React.useEffect(() => {
+    if (!repoUrl) return
 
     // Parse repo URL: https://github.com/owner/repo or owner/repo
-    let owner = ""
-    let repo = ""
+    let parsedOwner = ""
+    let parsedRepo = ""
 
     if (repoUrl.includes("github.com")) {
       const match = repoUrl.match(/github\.com\/([^\/]+)\/([^\/]+)/)
       if (match) {
-        owner = match[1]
-        repo = match[2]
+        parsedOwner = match[1]
+        parsedRepo = match[2]
       }
     } else if (repoUrl.includes("/")) {
       const parts = repoUrl.split("/")
-      owner = parts[0]
-      repo = parts[1]
+      parsedOwner = parts[0]
+      parsedRepo = parts[1]
     }
 
-    if (owner && repo && filename) {
-      // Sanitize the filename to remove any HTML entities or invalid characters
-      const cleanFilename = filename
-        .replace(/&lt;/g, '<')
-        .replace(/&gt;/g, '>')
-        .replace(/[<>]/g, '')
-        .trim()
-      
-      // Only create link if filename is actually a file, not a metric value
-      if (cleanFilename && !cleanFilename.includes('reduce') && !cleanFilename.includes('increase')) {
-        return `https://github.com/${owner}/${repo}/blob/main/${cleanFilename}`
-      }
+    setOwner(parsedOwner)
+    setRepo(parsedRepo)
+
+    // Fetch repository metadata to get the default branch
+    if (parsedOwner && parsedRepo) {
+      fetch(`https://api.github.com/repos/${parsedOwner}/${parsedRepo}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.default_branch) {
+            setDefaultBranch(data.default_branch)
+          }
+        })
+        .catch(() => {
+          // Fallback to main if API call fails
+          setDefaultBranch("main")
+        })
+    }
+  }, [repoUrl, open])
+
+  // Build GitHub URL for direct file viewing
+  const getGitHubLink = () => {
+    if (!owner || !repo || !filename) return null
+
+    const cleanFilename = filename
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/[<>]/g, '')
+      .trim()
+    
+    // Only create link if filename is actually a file, not a metric value
+    if (cleanFilename && !cleanFilename.includes('reduce') && !cleanFilename.includes('increase')) {
+      return `https://github.com/${owner}/${repo}/blob/${defaultBranch}/${cleanFilename}`
     }
     return null
   }
@@ -108,7 +134,7 @@ export function RecommendationModal({
             <div className="flex-1">
               <DialogTitle className="text-xl">{recommendation.action}</DialogTitle>
               <DialogDescription className="mt-2">
-                {recommendation.description}
+                {recommendation.metric} - {recommendation.priority} priority
               </DialogDescription>
             </div>
             <Badge
@@ -158,7 +184,7 @@ export function RecommendationModal({
               Why This Matters
             </h3>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              {recommendation.description}
+              This {recommendation.priority.toLowerCase()}-priority issue affects {recommendation.metric}. Focus on reducing {recommendation.targetValue} to improve code quality and maintainability.
             </p>
           </div>
 
@@ -182,19 +208,43 @@ export function RecommendationModal({
             </ul>
           </div>
 
-          {/* GitHub Link */}
-          {githubLink && (
-            <div>
+          {/* File Viewer */}
+          {showFileViewer && filename && owner && repo && (
+            <div className="space-y-3">
+              <h3 className="font-semibold flex items-center gap-2">
+                <Code2 className="h-4 w-4" />
+                Code Review
+              </h3>
+              <FileViewer
+                owner={owner}
+                repo={repo}
+                filePath={filename}
+                branch={defaultBranch}
+              />
+            </div>
+          )}
+
+          {/* Action Buttons */}
+          <div className="grid grid-cols-2 gap-3">
+            {filename && owner && repo && (
               <Button
                 variant="outline"
-                className="w-full"
+                onClick={() => setShowFileViewer(!showFileViewer)}
+              >
+                <Code2 className="h-4 w-4 mr-2" />
+                {showFileViewer ? "Hide" : "Inspect"}
+              </Button>
+            )}
+            {githubLink && (
+              <Button
+                variant="outline"
                 onClick={() => window.open(githubLink, "_blank")}
               >
                 <ExternalLink className="h-4 w-4 mr-2" />
-                View File on GitHub
+                GitHub
               </Button>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
         <div className="flex justify-end gap-2 pt-4 border-t">
