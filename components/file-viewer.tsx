@@ -5,6 +5,7 @@ import { Loader2, AlertCircle, Copy, Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { analyzeCodeStructure, type StructuralFinding } from "@/lib/code-structure-analyzer"
+import { RefactorPreview } from "@/components/refactor-preview"
 
 interface FileViewerProps {
   owner: string
@@ -22,6 +23,7 @@ export function FileViewer({ owner, repo, filePath, branch, showFindings = true,
   const [copied, setCopied] = React.useState(false)
   const [findings, setFindings] = React.useState<StructuralFinding[]>([])
   const [expandedFindings, setExpandedFindings] = React.useState<Set<number>>(new Set())
+  const [selectedFindingForRefactor, setSelectedFindingForRefactor] = React.useState<number | null>(null)
 
   React.useEffect(() => {
     const fetchFile = async () => {
@@ -163,36 +165,57 @@ export function FileViewer({ owner, repo, filePath, branch, showFindings = true,
         <div className="space-y-2 bg-muted/20 border border-border rounded-lg p-3">
           <p className="text-xs font-semibold text-foreground">Structural Findings</p>
           {findings.map((finding, idx) => (
-            <button
-              key={idx}
-              onClick={() => {
-                const newExpanded = new Set(expandedFindings)
-                if (newExpanded.has(idx)) {
-                  newExpanded.delete(idx)
-                } else {
-                  newExpanded.add(idx)
-                }
-                setExpandedFindings(newExpanded)
-              }}
-              className={cn(
-                "w-full text-left text-xs p-2 rounded border transition-colors",
-                finding.severity === 'critical' ? 'bg-red-500/10 border-red-500/30 hover:bg-red-500/15' :
-                finding.severity === 'high' ? 'bg-orange-500/10 border-orange-500/30 hover:bg-orange-500/15' :
-                finding.severity === 'medium' ? 'bg-yellow-500/10 border-yellow-500/30 hover:bg-yellow-500/15' :
-                'bg-blue-500/10 border-blue-500/30 hover:bg-blue-500/15'
-              )}
-            >
-              <div className="font-semibold">
-                Lines {finding.lineRange.start}–{finding.lineRange.end}: {finding.type.replace('-', ' ')}
-              </div>
-              <div className="text-muted-foreground mt-1">{finding.evidence}</div>
-              {expandedFindings.has(idx) && (
-                <div className="mt-2 pt-2 border-t border-current/20 space-y-1">
-                  <div><span className="font-semibold">Why: </span>{finding.interpretation}</div>
-                  <div><span className="font-semibold">Action: </span>{finding.suggestedAction}</div>
+            <div key={idx} className="space-y-2">
+              <button
+                onClick={() => {
+                  const newExpanded = new Set(expandedFindings)
+                  if (newExpanded.has(idx)) {
+                    newExpanded.delete(idx)
+                  } else {
+                    newExpanded.add(idx)
+                  }
+                  setExpandedFindings(newExpanded)
+                }}
+                className={cn(
+                  "w-full text-left text-xs p-2 rounded border transition-colors",
+                  finding.severity === 'critical' ? 'bg-red-500/10 border-red-500/30 hover:bg-red-500/15' :
+                  finding.severity === 'high' ? 'bg-orange-500/10 border-orange-500/30 hover:bg-orange-500/15' :
+                  finding.severity === 'medium' ? 'bg-yellow-500/10 border-yellow-500/30 hover:bg-yellow-500/15' :
+                  'bg-blue-500/10 border-blue-500/30 hover:bg-blue-500/15'
+                )}
+              >
+                <div className="font-semibold">
+                  Lines {finding.lineRange.start}–{finding.lineRange.end}: {finding.type.replace('-', ' ')}
+                </div>
+                <div className="text-muted-foreground mt-1">{finding.evidence}</div>
+                {expandedFindings.has(idx) && (
+                  <div className="mt-2 pt-2 border-t border-current/20 space-y-1">
+                    <div><span className="font-semibold">Why: </span>{finding.interpretation}</div>
+                    <div><span className="font-semibold">Action: </span>{finding.suggestedAction}</div>
+                  </div>
+                )}
+              </button>
+              
+              {/* Refactor Preview Button */}
+              <button
+                onClick={() => setSelectedFindingForRefactor(selectedFindingForRefactor === idx ? null : idx)}
+                className="w-full text-left text-xs p-2 rounded border border-primary/30 bg-primary/5 hover:bg-primary/10 transition-colors text-primary font-medium"
+              >
+                {selectedFindingForRefactor === idx ? 'Hide Refactor' : 'Show Refactor'}
+              </button>
+              
+              {/* Refactor Preview Content */}
+              {selectedFindingForRefactor === idx && content && (
+                <div className="p-3 rounded-lg border border-primary/20 bg-primary/5">
+                  <RefactorPreview
+                    fileContent={content}
+                    finding={finding}
+                    filePath={filePath}
+                    language="typescript"
+                  />
                 </div>
               )}
-            </button>
+            </div>
           ))}
         </div>
       )}
