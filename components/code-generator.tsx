@@ -29,27 +29,15 @@ export function CodeGenerator({
       setError(null)
       setImprovedCode(null)
 
-      const prompt = `You are a code quality expert. A code analysis tool has identified the following issue:
-
-Issue: ${recommendation.action}
-Category: ${recommendation.metric}
-Priority: ${recommendation.priority}
-Impact: ${recommendation.impact}
-Target: ${recommendation.targetValue}
-
-${fileContent ? `Original code:\n\`\`\`${language}\n${fileContent}\n\`\`\`` : "No code provided - provide a general example for this issue"}
-
-Please provide:
-1. Analysis of the issue
-2. Improved/refactored code that addresses this issue
-3. Explanation of changes
-
-Format your response with clear sections marked with ## headings.`
-
-      // For now, create a template suggestion since we don't have an AI API
-      // In production, this would call your AI API
-      const suggestions = generateCodeSuggestions(recommendation, fileContent)
-      setImprovedCode(suggestions)
+      // Use fixExample from recommendation if available for most accurate solutions
+      if (recommendation.fixExample) {
+        const suggestions = formatFixExample(recommendation)
+        setImprovedCode(suggestions)
+      } else {
+        // Fallback to generated suggestions
+        const suggestions = generateCodeSuggestions(recommendation, fileContent)
+        setImprovedCode(suggestions)
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to generate suggestions")
     } finally {
@@ -149,6 +137,48 @@ Format your response with clear sections marked with ## headings.`
   )
 }
 
+function formatFixExample(recommendation: Recommendation): string {
+  if (!recommendation.fixExample) return ""
+
+  const parts: string[] = []
+
+  parts.push(`# ${recommendation.title}`)
+  parts.push(`## Problem`)
+  parts.push(recommendation.evidence || recommendation.description)
+
+  if (recommendation.filePath) {
+    parts.push(`\n### Location`)
+    parts.push(`File: \`${recommendation.filePath}\``)
+    if (recommendation.lineNumbers) {
+      parts.push(`Lines: ${recommendation.lineNumbers.start}-${recommendation.lineNumbers.end}`)
+    }
+  }
+
+  parts.push(`\n## ❌ BEFORE (Current Issue)`)
+  parts.push(`\`\`\`${recommendation.fixExample.language}`)
+  parts.push(recommendation.fixExample.before)
+  parts.push(`\`\`\``)
+
+  parts.push(`\n## ✅ AFTER (Fixed)`)
+  parts.push(`\`\`\`${recommendation.fixExample.language}`)
+  parts.push(recommendation.fixExample.after)
+  parts.push(`\`\`\``)
+
+  parts.push(`\n## Why This Works`)
+  parts.push(recommendation.fixExample.explanation)
+
+  parts.push(`\n## Action Items`)
+  parts.push(recommendation.action)
+
+  if (recommendation.metrics) {
+    parts.push(`\n## Expected Impact`)
+    parts.push(`- Current: ${recommendation.metrics.current} ${recommendation.metrics.unit}`)
+    parts.push(`- Target: ${recommendation.metrics.target} ${recommendation.metrics.unit}`)
+  }
+
+  return parts.join("\n")
+}
+
 function generateCodeSuggestions(
   recommendation: Recommendation,
   fileContent?: string
@@ -156,7 +186,7 @@ function generateCodeSuggestions(
   const suggestions: string[] = []
 
   suggestions.push(`# Code Improvement Suggestion`)
-  suggestions.push(`## Issue: ${recommendation.action}`)
+  suggestions.push(`## Issue: ${recommendation.title || recommendation.action}`)
   suggestions.push(`**Category:** ${recommendation.metric}`)
   suggestions.push(`**Priority:** ${recommendation.priority}`)
   suggestions.push(`**Impact:** ${recommendation.impact}`)

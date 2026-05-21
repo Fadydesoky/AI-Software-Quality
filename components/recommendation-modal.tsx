@@ -176,35 +176,54 @@ export function RecommendationModal({
             </div>
           </div>
 
+          {/* File Location - If available */}
+          {recommendation.filePath && (
+            <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
+              <p className="text-xs text-muted-foreground mb-1">Affected File</p>
+              <code className="text-sm font-mono text-foreground">{recommendation.filePath}</code>
+              {recommendation.lineNumbers && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Lines {recommendation.lineNumbers.start}-{recommendation.lineNumbers.end}
+                </p>
+              )}
+            </div>
+          )}
+
           {/* Evidence / Why */}
           <div className="space-y-2">
             <h3 className="font-semibold flex items-center gap-2">
               <AlertCircle className="h-4 w-4 text-muted-foreground" />
               Why This Matters
             </h3>
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              This {recommendation.priority.toLowerCase()}-priority issue affects {recommendation.metric}. Focus on reducing {recommendation.targetValue} to improve code quality and maintainability.
-            </p>
+            <div className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">
+              {recommendation.evidence || `This ${recommendation.priority.toLowerCase()}-priority issue affects ${recommendation.metric}. Focus on reducing ${recommendation.targetValue} to improve code quality and maintainability.`}
+            </div>
           </div>
 
           {/* Target / Suggested Actions */}
           <div className="bg-muted/30 rounded-lg border border-border/50 p-4 space-y-3">
             <h3 className="font-semibold flex items-center gap-2">
               <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-              Suggested Actions
+              Action Plan
             </h3>
-            <ul className="space-y-2 text-sm">
-              <li className="flex gap-2 text-muted-foreground">
-                <span className="mt-1">•</span>
-                <span>{recommendation.action}</span>
-              </li>
-              {recommendation.targetValue && (
-                <li className="flex gap-2 text-muted-foreground">
-                  <span className="mt-1">•</span>
-                  <span>Target: <strong className="text-foreground">{recommendation.targetValue}</strong></span>
-                </li>
-              )}
-            </ul>
+            <div className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
+              {recommendation.action}
+            </div>
+            {recommendation.metrics && (
+              <div className="border-t pt-3 mt-3">
+                <p className="text-xs text-muted-foreground font-medium mb-2">Expected Progress</p>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div>
+                    <span className="text-muted-foreground">Current:</span>
+                    <p className="font-semibold text-foreground">{recommendation.metrics.current}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Target:</span>
+                    <p className="font-semibold text-emerald-600">{recommendation.metrics.target}</p>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Code Generator - Always Available */}

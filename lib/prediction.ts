@@ -54,12 +54,32 @@ export interface RiskCategory {
 }
 
 export interface Recommendation {
-  priority: "high" | "medium" | "low"
+  id: string
+  priority: "critical" | "high" | "medium" | "low"
   metric: string
+  title: string
+  description: string
   action: string
+  evidence: string
   impact: string
   targetValue: string
   filePath?: string
+  lineNumbers?: {
+    start: number
+    end: number
+  }
+  codeSnippet?: string
+  fixExample?: {
+    language: string
+    before: string
+    after: string
+    explanation: string
+  }
+  metrics?: {
+    current: number | string
+    target: number | string
+    unit: string
+  }
 }
 
 export interface TrendAnalysis {
