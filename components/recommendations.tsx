@@ -101,7 +101,7 @@ export function Recommendations({ recommendations, isAdvancedMode = false, repoU
               </div>
             </div>
             <Badge variant="outline" className="text-[10px] font-medium bg-primary/5 text-primary border-primary/20">
-              AI-Generated
+              Engineering-Based
             </Badge>
           </div>
         </CardHeader>

@@ -228,14 +228,47 @@ export function RecommendationModal({
             )}
           </div>
 
-          {/* Code Generator - Always Available */}
+          {/* Implementation Steps - If available */}
+          {(recommendation as any).implementationSteps && (recommendation as any).implementationSteps.length > 0 && (
+            <div className="space-y-3 border-t pt-6">
+              <h3 className="font-semibold flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-blue-500" />
+                Implementation Steps
+              </h3>
+              <div className="space-y-2">
+                {(recommendation as any).implementationSteps.map((step: string, idx: number) => (
+                  <div key={idx} className="flex gap-3 text-sm">
+                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-500/10 text-xs font-semibold text-blue-600">
+                      {idx + 1}
+                    </div>
+                    <p className="pt-0.5 text-muted-foreground leading-relaxed">{step}</p>
+                  </div>
+                ))}
+              </div>
+              {(recommendation as any).estimatedEffort && (
+                <div className="mt-4 flex items-center gap-2 rounded-lg bg-muted/50 p-3 text-xs">
+                  <span className="text-muted-foreground">Estimated Effort:</span>
+                  <span className="font-semibold capitalize text-foreground">{(recommendation as any).estimatedEffort}</span>
+                  {(recommendation as any).riskLevel && (
+                    <>
+                      <span className="text-muted-foreground">|</span>
+                      <span className="text-muted-foreground">Risk Level:</span>
+                      <span className="font-semibold capitalize text-foreground">{(recommendation as any).riskLevel}</span>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Code Improvements */}
           <div className="space-y-3 border-t pt-6">
             <h3 className="font-semibold flex items-center gap-2">
               <Code2 className="h-4 w-4" />
-              AI-Powered Code Improvements
+              Code Improvements
             </h3>
             <p className="text-sm text-muted-foreground">
-              Get specific code suggestions and examples to address this issue.
+              View suggested code refactoring and implementation patterns.
             </p>
             <CodeGenerator recommendation={recommendation} />
           </div>
