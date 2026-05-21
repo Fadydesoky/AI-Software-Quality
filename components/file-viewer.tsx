@@ -33,9 +33,11 @@ export function FileViewer({ owner, repo, filePath, branch }: FileViewerProps) {
 
         if (!response.ok) {
           if (response.status === 404) {
-            setError(`File not found: ${filePath}`)
+            setError(`File not found. Verify the path is correct. Path: ${filePath}. Check if the file exists in the ${branch} branch.`)
+          } else if (response.status === 403) {
+            setError(`API rate limit exceeded or access denied. Try again later.`)
           } else {
-            setError(`GitHub API error: ${response.statusText}`)
+            setError(`GitHub API error: ${response.statusText}. Please verify the repository path and file location.`)
           }
           setContent(null)
           return

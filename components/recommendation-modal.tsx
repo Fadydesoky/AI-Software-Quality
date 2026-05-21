@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { ExternalLink, AlertCircle, CheckCircle2, TrendingUp, Target, Code2 } from "lucide-react"
 import { FileViewer } from "@/components/file-viewer"
+import { CodeGenerator } from "@/components/code-generator"
 import { cn } from "@/lib/utils"
 import type { Recommendation } from "@/lib/prediction"
 
@@ -102,11 +103,8 @@ export function RecommendationModal({
 
   const colors = priorityColors[recommendation.priority]
 
-  // Extract filename from targetValue - it should contain actual file path
-  // Only generate link if targetValue appears to be a valid file path (contains / or .ext)
-  const filename = recommendation.targetValue?.match(/^\S+\.\w+$|^[^<>\s]+\/[^<>\s]+/) 
-    ? recommendation.targetValue 
-    : null
+  // Use filePath if provided, otherwise don't attempt file viewing
+  const filename = recommendation.filePath || null
 
   // Build GitHub URL for direct file viewing
   const getGitHubLink = () => {
@@ -209,43 +207,58 @@ export function RecommendationModal({
             </ul>
           </div>
 
-          {/* File Viewer */}
-          {showFileViewer && filename && owner && repo && (
-            <div className="space-y-3">
-              <h3 className="font-semibold flex items-center gap-2">
-                <Code2 className="h-4 w-4" />
-                Code Review
-              </h3>
-              <FileViewer
-                owner={owner}
-                repo={repo}
-                filePath={filename}
-                branch={defaultBranch}
-              />
+          {/* Code Generator - Always Available */}
+          <div className="space-y-3 border-t pt-6">
+            <h3 className="font-semibold flex items-center gap-2">
+              <Code2 className="h-4 w-4" />
+              AI-Powered Code Improvements
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              Get specific code suggestions and examples to address this issue.
+            </p>
+            <CodeGenerator recommendation={recommendation} />
+          </div>
+
+          {/* File Viewer - Optional */}
+          {filename && owner && repo && (
+            <div className="space-y-3 border-t pt-6">
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold flex items-center gap-2">
+                  <Code2 className="h-4 w-4" />
+                  Source Code Review
+                </h3>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowFileViewer(!showFileViewer)}
+                >
+                  {showFileViewer ? "Hide" : "Show"}
+                </Button>
+              </div>
+              {showFileViewer && (
+                <FileViewer
+                  owner={owner}
+                  repo={repo}
+                  filePath={filename}
+                  branch={defaultBranch}
+                />
+              )}
             </div>
           )}
 
-          {/* Action Buttons */}
-          <div className="grid grid-cols-2 gap-3">
-            {filename && owner && repo && (
+          {/* GitHub Link - Always available if valid */}
+          {githubLink && (
+            <div className="border-t pt-4">
               <Button
                 variant="outline"
-                onClick={() => setShowFileViewer(!showFileViewer)}
-              >
-                <Code2 className="h-4 w-4 mr-2" />
-                {showFileViewer ? "Hide" : "Inspect"}
-              </Button>
-            )}
-            {githubLink && (
-              <Button
-                variant="outline"
+                className="w-full"
                 onClick={() => window.open(githubLink, "_blank")}
               >
                 <ExternalLink className="h-4 w-4 mr-2" />
-                GitHub
+                View File on GitHub
               </Button>
-            )}
-          </div>
+            </div>
+          )}
         </div>
 
         <div className="flex justify-end gap-2 pt-4 border-t">

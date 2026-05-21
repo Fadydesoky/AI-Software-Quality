@@ -59,6 +59,7 @@ export interface Recommendation {
   action: string
   impact: string
   targetValue: string
+  filePath?: string
 }
 
 export interface TrendAnalysis {
