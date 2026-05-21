@@ -175,6 +175,22 @@ function AnalyzeContent() {
     setComparisonEntries(null)
   }
 
+  const handleDeleteItem = (id: string) => {
+    setHistory(prev => prev.filter(h => h.id !== id))
+    setSelectedIds(prev => prev.filter(sid => sid !== id))
+    if (comparisonEntries) {
+      if (comparisonEntries[0].id === id || comparisonEntries[1].id === id) {
+        setComparisonEntries(null)
+      }
+    }
+  }
+
+  const handleDeleteSelected = (ids: string[]) => {
+    setHistory(prev => prev.filter(h => !ids.includes(h.id)))
+    setSelectedIds([])
+    setComparisonEntries(null)
+  }
+
   const handleSelect = (id: string) => {
     setSelectedIds(prev => {
       if (prev.includes(id)) {
@@ -375,6 +391,7 @@ function AnalyzeContent() {
                 <Recommendations 
                   recommendations={result.recommendations} 
                   isAdvancedMode={isAdvancedMode}
+                  repoUrl={currentRepoUrl}
                 />
               </div>
             )}
@@ -437,6 +454,8 @@ function AnalyzeContent() {
             onCompare={handleCompare}
             selectedIds={selectedIds}
             onSelect={handleSelect}
+            onDelete={handleDeleteItem}
+            onDeleteSelected={handleDeleteSelected}
           />
         </div>
       </main>
